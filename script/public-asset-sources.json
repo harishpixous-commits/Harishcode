@@ -1,0 +1,212 @@
+[
+  {
+    "path": "packages/app/public/apple-touch-icon-v3.png",
+    "source": "packages/ui/src/assets/favicon/apple-touch-icon-v3.png",
+    "sha256": "2f2d5687a641f7fc1c3931072249a5984660375c091064fe8b374e4e43a8656c"
+  },
+  {
+    "path": "packages/app/public/apple-touch-icon.png",
+    "source": "packages/ui/src/assets/favicon/apple-touch-icon.png",
+    "sha256": "2f2d5687a641f7fc1c3931072249a5984660375c091064fe8b374e4e43a8656c"
+  },
+  {
+    "path": "packages/app/public/favicon-96x96-v3.png",
+    "source": "packages/ui/src/assets/favicon/favicon-96x96-v3.png",
+    "sha256": "aa34092540de60c889610edfa3c25316e215f12d88af29cfba530d09aee7265c"
+  },
+  {
+    "path": "packages/app/public/favicon-96x96.png",
+    "source": "packages/ui/src/assets/favicon/favicon-96x96.png",
+    "sha256": "aa34092540de60c889610edfa3c25316e215f12d88af29cfba530d09aee7265c"
+  },
+  {
+    "path": "packages/app/public/favicon-v3.ico",
+    "source": "packages/ui/src/assets/favicon/favicon-v3.ico",
+    "sha256": "808e1ca7659cb52e0240aac075ccecdf5539047da02150f2b95e0aa78a44056f"
+  },
+  {
+    "path": "packages/app/public/favicon-v3.svg",
+    "source": "packages/ui/src/assets/favicon/favicon-v3.svg",
+    "sha256": "3170e5551c0efca021076a9ced9411e5ae64345c846aa87ae99c90bf467c9a3a"
+  },
+  {
+    "path": "packages/app/public/favicon.ico",
+    "source": "packages/ui/src/assets/favicon/favicon.ico",
+    "sha256": "808e1ca7659cb52e0240aac075ccecdf5539047da02150f2b95e0aa78a44056f"
+  },
+  {
+    "path": "packages/app/public/favicon.svg",
+    "source": "packages/ui/src/assets/favicon/favicon.svg",
+    "sha256": "3170e5551c0efca021076a9ced9411e5ae64345c846aa87ae99c90bf467c9a3a"
+  },
+  {
+    "path": "packages/app/public/social-share-zen.png",
+    "source": "packages/ui/src/assets/images/social-share-zen.png",
+    "sha256": "08fa6c262eae616efdbbaff4cc28bfbf87b41929ac7e957e6c2d67f11fb72eeb"
+  },
+  {
+    "path": "packages/app/public/social-share.png",
+    "source": "packages/ui/src/assets/images/social-share.png",
+    "sha256": "69ca6a2678f7d033d1eb0f2f5b6a91d1df92d97e372babd8576c19c0cbf42312"
+  },
+  {
+    "path": "packages/app/public/web-app-manifest-192x192.png",
+    "source": "packages/ui/src/assets/favicon/web-app-manifest-192x192.png",
+    "sha256": "d4b192c5d634ba493fcf48b33db8a3ce8e6f5d58ef078884f257b064f52c6480"
+  },
+  {
+    "path": "packages/app/public/web-app-manifest-512x512.png",
+    "source": "packages/ui/src/assets/favicon/web-app-manifest-512x512.png",
+    "sha256": "63495f813cb7ea507cb6eb2cd1ee9d673e456a6af3eeb4138bc920d24ec9f15f"
+  },
+  {
+    "path": "packages/console/app/public/apple-touch-icon-v3.png",
+    "source": "packages/ui/src/assets/favicon/apple-touch-icon-v3.png",
+    "sha256": "2f2d5687a641f7fc1c3931072249a5984660375c091064fe8b374e4e43a8656c"
+  },
+  {
+    "path": "packages/console/app/public/apple-touch-icon.png",
+    "source": "packages/ui/src/assets/favicon/apple-touch-icon.png",
+    "sha256": "2f2d5687a641f7fc1c3931072249a5984660375c091064fe8b374e4e43a8656c"
+  },
+  {
+    "path": "packages/console/app/public/favicon-96x96-v3.png",
+    "source": "packages/ui/src/assets/favicon/favicon-96x96-v3.png",
+    "sha256": "aa34092540de60c889610edfa3c25316e215f12d88af29cfba530d09aee7265c"
+  },
+  {
+    "path": "packages/console/app/public/favicon-96x96.png",
+    "source": "packages/ui/src/assets/favicon/favicon-96x96.png",
+    "sha256": "aa34092540de60c889610edfa3c25316e215f12d88af29cfba530d09aee7265c"
+  },
+  {
+    "path": "packages/console/app/public/favicon-v3.ico",
+    "source": "packages/ui/src/assets/favicon/favicon-v3.ico",
+    "sha256": "808e1ca7659cb52e0240aac075ccecdf5539047da02150f2b95e0aa78a44056f"
+  },
+  {
+    "path": "packages/console/app/public/favicon-v3.svg",
+    "source": "packages/ui/src/assets/favicon/favicon-v3.svg",
+    "sha256": "3170e5551c0efca021076a9ced9411e5ae64345c846aa87ae99c90bf467c9a3a"
+  },
+  {
+    "path": "packages/console/app/public/favicon.ico",
+    "source": "packages/ui/src/assets/favicon/favicon.ico",
+    "sha256": "808e1ca7659cb52e0240aac075ccecdf5539047da02150f2b95e0aa78a44056f"
+  },
+  {
+    "path": "packages/console/app/public/favicon.svg",
+    "source": "packages/ui/src/assets/favicon/favicon.svg",
+    "sha256": "3170e5551c0efca021076a9ced9411e5ae64345c846aa87ae99c90bf467c9a3a"
+  },
+  {
+    "path": "packages/console/app/public/site.webmanifest",
+    "source": "packages/ui/src/assets/favicon/site.webmanifest",
+    "sha256": "3e7a115be0a0e881642934401d82f879aebf5bb80c05329e4e3ccd9412570dd2"
+  },
+  {
+    "path": "packages/console/app/public/social-share-black.png",
+    "source": "packages/ui/src/assets/images/social-share-black.png",
+    "sha256": "b31939a3fdcb9f5cacfd56a9583398d2c6e609bdc9d94968ce7610f13c825918"
+  },
+  {
+    "path": "packages/console/app/public/social-share-zen.png",
+    "source": "packages/ui/src/assets/images/social-share-zen.png",
+    "sha256": "08fa6c262eae616efdbbaff4cc28bfbf87b41929ac7e957e6c2d67f11fb72eeb"
+  },
+  {
+    "path": "packages/console/app/public/social-share.png",
+    "source": "packages/ui/src/assets/images/social-share.png",
+    "sha256": "69ca6a2678f7d033d1eb0f2f5b6a91d1df92d97e372babd8576c19c0cbf42312"
+  },
+  {
+    "path": "packages/console/app/public/web-app-manifest-192x192.png",
+    "source": "packages/ui/src/assets/favicon/web-app-manifest-192x192.png",
+    "sha256": "d4b192c5d634ba493fcf48b33db8a3ce8e6f5d58ef078884f257b064f52c6480"
+  },
+  {
+    "path": "packages/console/app/public/web-app-manifest-512x512.png",
+    "source": "packages/ui/src/assets/favicon/web-app-manifest-512x512.png",
+    "sha256": "63495f813cb7ea507cb6eb2cd1ee9d673e456a6af3eeb4138bc920d24ec9f15f"
+  },
+  {
+    "path": "packages/web/public/apple-touch-icon-v3.png",
+    "source": "packages/ui/src/assets/favicon/apple-touch-icon-v3.png",
+    "sha256": "2f2d5687a641f7fc1c3931072249a5984660375c091064fe8b374e4e43a8656c"
+  },
+  {
+    "path": "packages/web/public/apple-touch-icon.png",
+    "source": "packages/ui/src/assets/favicon/apple-touch-icon.png",
+    "sha256": "2f2d5687a641f7fc1c3931072249a5984660375c091064fe8b374e4e43a8656c"
+  },
+  {
+    "path": "packages/web/public/favicon-96x96-v3.png",
+    "source": "packages/ui/src/assets/favicon/favicon-96x96-v3.png",
+    "sha256": "aa34092540de60c889610edfa3c25316e215f12d88af29cfba530d09aee7265c"
+  },
+  {
+    "path": "packages/web/public/favicon-96x96.png",
+    "source": "packages/ui/src/assets/favicon/favicon-96x96.png",
+    "sha256": "aa34092540de60c889610edfa3c25316e215f12d88af29cfba530d09aee7265c"
+  },
+  {
+    "path": "packages/web/public/favicon-v3.ico",
+    "source": "packages/ui/src/assets/favicon/favicon-v3.ico",
+    "sha256": "808e1ca7659cb52e0240aac075ccecdf5539047da02150f2b95e0aa78a44056f"
+  },
+  {
+    "path": "packages/web/public/favicon-v3.svg",
+    "source": "packages/ui/src/assets/favicon/favicon-v3.svg",
+    "sha256": "3170e5551c0efca021076a9ced9411e5ae64345c846aa87ae99c90bf467c9a3a"
+  },
+  {
+    "path": "packages/web/public/favicon.ico",
+    "source": "packages/ui/src/assets/favicon/favicon.ico",
+    "sha256": "808e1ca7659cb52e0240aac075ccecdf5539047da02150f2b95e0aa78a44056f"
+  },
+  {
+    "path": "packages/web/public/favicon.svg",
+    "source": "packages/ui/src/assets/favicon/favicon.svg",
+    "sha256": "3170e5551c0efca021076a9ced9411e5ae64345c846aa87ae99c90bf467c9a3a"
+  },
+  {
+    "path": "packages/web/public/site.webmanifest",
+    "source": "packages/ui/src/assets/favicon/site.webmanifest",
+    "sha256": "3e7a115be0a0e881642934401d82f879aebf5bb80c05329e4e3ccd9412570dd2"
+  },
+  {
+    "path": "packages/web/public/social-share-zen.png",
+    "source": "packages/ui/src/assets/images/social-share-zen.png",
+    "sha256": "08fa6c262eae616efdbbaff4cc28bfbf87b41929ac7e957e6c2d67f11fb72eeb"
+  },
+  {
+    "path": "packages/web/public/social-share.png",
+    "source": "packages/ui/src/assets/images/social-share.png",
+    "sha256": "69ca6a2678f7d033d1eb0f2f5b6a91d1df92d97e372babd8576c19c0cbf42312"
+  },
+  {
+    "path": "packages/web/public/web-app-manifest-192x192.png",
+    "source": "packages/ui/src/assets/favicon/web-app-manifest-192x192.png",
+    "sha256": "d4b192c5d634ba493fcf48b33db8a3ce8e6f5d58ef078884f257b064f52c6480"
+  },
+  {
+    "path": "packages/web/public/web-app-manifest-512x512.png",
+    "source": "packages/ui/src/assets/favicon/web-app-manifest-512x512.png",
+    "sha256": "63495f813cb7ea507cb6eb2cd1ee9d673e456a6af3eeb4138bc920d24ec9f15f"
+  },
+  {
+    "path": "sdks/vscode/images/button-dark.svg",
+    "source": "packages/identity/mark.svg",
+    "sha256": "3170e5551c0efca021076a9ced9411e5ae64345c846aa87ae99c90bf467c9a3a"
+  },
+  {
+    "path": "sdks/vscode/images/button-light.svg",
+    "source": "packages/identity/mark-light.svg",
+    "sha256": "7d2ac098f3785d5f9f7681ebeb78a55a6bea66bd4570d954f7749b5497f1fb60"
+  },
+  {
+    "path": "sdks/vscode/images/icon.png",
+    "source": "packages/identity/mark-512x512.png",
+    "sha256": "155f9d13398adbe2725934c15c64d043c73422da9766c15def587dd72090f240"
+  }
+]
