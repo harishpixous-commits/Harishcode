@@ -1,0 +1,7 @@
+var e=`<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">\r
+  <path\r
+    d="M14.483 6H4.721a1 1 0 0 0-.949.684L2 12V5h12a1 1 0 0 0-1-1H7.562a1 1 0 0 1-.64-.232l-.644-.536A1 1 0 0 0 5.638 3H2a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h11l2.403-5.606A1 1 0 0 0 14.483 6"\r
+    fill="currentColor" />\r
+</svg>\r
+`;export{e as default};
+//# sourceMappingURL=folder-open-Db6HUgjZ.js.map

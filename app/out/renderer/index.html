@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en" style="background-color: var(--background-base)">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- data-sm lets the MetaProvider replace this pre-load title with the app's <Title> tags. -->
+    <title data-sm>Harish Code</title>
+    <link rel="icon" type="image/png" href="./favicon-96x96-v3.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="./favicon-v3.svg" />
+    <link rel="shortcut icon" href="./favicon-v3.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon-v3.png" />
+    <meta name="theme-color" content="#F8F7F7" />
+    <meta property="og:image" content="./social-share.png" />
+    <meta property="twitter:image" content="./social-share.png" />
+    <script id="oc-theme-preload-script">;(function () {
+  var key = "opencode-theme-id"
+  var themeId = localStorage.getItem(key) || "oc-2"
+
+  var scheme = localStorage.getItem("opencode-color-scheme") || "system"
+  var isDark = scheme === "dark" || (scheme === "system" && matchMedia("(prefers-color-scheme: dark)").matches)
+  var mode = isDark ? "dark" : "light"
+
+  document.documentElement.dataset.theme = themeId
+  document.documentElement.dataset.colorScheme = mode
+  document.documentElement.style.backgroundColor = isDark ? "#080808" : "#fafafa"
+
+  // Update theme-color meta tag to match app color scheme
+  var metas = document.querySelectorAll("meta[name='theme-color']")
+  if (metas.length > 0) metas[0].setAttribute("content", isDark ? "#080808" : "#fafafa")
+
+  if (themeId === "oc-2") return
+
+  var css = localStorage.getItem("opencode-theme-css-" + mode)
+  if (css) {
+    var style = document.createElement("style")
+    style.id = "oc-theme-preload"
+    style.textContent =
+      ":root{color-scheme:" +
+      mode +
+      ";--text-mix-blend-mode:" +
+      (isDark ? "plus-lighter" : "multiply") +
+      ";" +
+      css +
+      "}"
+    document.head.appendChild(style)
+  }
+})()
+</script>
+
+    <!-- harish-code-brand-guard -->
+    <script>
+      ;(function () {
+        var MAP = { "OpenCode": "Harish Code", "opencode": "Harish Code" }
+        var BLOCK = { SCRIPT: 1, STYLE: 1, CODE: 1, PRE: 1 }
+
+        function fixNode(node) {
+          var parent = node.parentNode
+          if (!parent || BLOCK[parent.nodeName]) return
+          var v = node.nodeValue
+          if (!v) return
+          var t = MAP[v.trim()]
+          if (!t) return
+          node.nodeValue = v.replace(v.trim(), t)
+        }
+
+        function walk(root) {
+          if (!root) return
+          if (root.nodeType === 3) { fixNode(root); return }
+          if (BLOCK[root.nodeName]) return
+          var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null)
+          var n, batch = []
+          while ((n = walker.nextNode())) batch.push(n)
+          for (var i = 0; i < batch.length; i++) fixNode(batch[i])
+        }
+
+        function start() {
+          walk(document.body)
+          new MutationObserver(function (records) {
+            for (var i = 0; i < records.length; i++) {
+              var r = records[i]
+              if (r.type === "characterData") { fixNode(r.target); continue }
+              for (var j = 0; j < r.addedNodes.length; j++) walk(r.addedNodes[j])
+            }
+          }).observe(document.body, { childList: true, subtree: true, characterData: true })
+        }
+
+        if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start)
+        else start()
+      })()
+    </script>
+    <script type="module" crossorigin src="./assets/main-Cs-Uxtxi.js"></script>
+    <link rel="modulepreload" crossorigin href="./assets/rolldown-runtime-hePW80VL.js">
+    <link rel="stylesheet" crossorigin href="./assets/main-CapUN3CX.css">
+  </head>
+  <body class="antialiased overscroll-none text-12-regular overflow-hidden">
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root" class="flex flex-col h-dvh"></div>
+  </body>
+</html>

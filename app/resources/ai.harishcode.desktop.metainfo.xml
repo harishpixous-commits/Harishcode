@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>ai.harishcode.desktop</id>
+
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+
+  <name>Harish Code</name>
+  <summary>Harish Code, the open source coding agent</summary>
+
+  <developer id="io.github.harishpixous-commits">
+    <name>Harish Innovations</name>
+  </developer>
+
+  <description>
+    <p>
+      Harish Code is a desktop AI coding agent that helps you write, review and
+      run code with any model — including bundled free models and local Ollama
+      models.
+    </p>
+    <p>
+      It is an independent, rebranded distribution of the MIT-licensed OpenCode
+      desktop application. See NOTICE for the full attribution.
+    </p>
+  </description>
+
+  <launchable type="desktop-id">ai.harishcode.desktop.desktop</launchable>
+
+  <url type="homepage">https://github.com/harishpixous-commits/Harishcode</url>
+  <url type="bugtracker">https://github.com/harishpixous-commits/Harishcode/issues</url>
+
+  <content_rating type="oars-1.1" />
+
+  <releases>
+    <release version="2.2.0" date="2026-10-29">
+      <description>
+        <p>Initial Harish Code distribution, tracking OpenCode 2.2.0.</p>
+      </description>
+    </release>
+  </releases>
+</component>

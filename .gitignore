@@ -1,0 +1,24 @@
+# dependencies
+node_modules/
+**/node_modules/
+
+# packaged application archives (build artifacts, not source)
+*.asar
+dist/
+release/
+
+# build logs / temp
+*.log
+npm-debug.log*
+.tmp/
+
+# editor / OS noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# env & secrets
+.env
+.env.*
+!.env.example
