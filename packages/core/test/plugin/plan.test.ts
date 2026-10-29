@@ -289,6 +289,30 @@ describe("plan plugin mutations", () => {
     }),
   )
 
+  it.effect("denies delegation rather than allowing a child to bypass Plan restrictions", () =>
+    Effect.gen(function* () {
+      const { planAgent } = yield* run()
+      for (const agent of ["general", "explore", "custom-agent"]) {
+        expect(Permission.evaluate("subagent", agent, planAgent.permissions).effect).toBe("deny")
+      }
+    }),
+  )
+
+  it.effect("asks before every shell command instead of treating parsing as read-only enforcement", () =>
+    Effect.gen(function* () {
+      const { planAgent } = yield* run()
+      for (const command of [
+        "git log -5",
+        "printf changed > tracked.txt",
+        "git status; rm tracked.txt",
+        "echo $(touch tracked.txt)",
+        "Get-Content a; Remove-Item a",
+      ]) {
+        expect(Permission.evaluate("shell", command, planAgent.permissions).effect).toBe("ask")
+      }
+    }),
+  )
+
   it.effect("preserves mutation failures unrelated to permissions", () =>
     Effect.gen(function* () {
       const { toolHook } = yield* run()

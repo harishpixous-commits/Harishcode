@@ -204,7 +204,15 @@ describe("Agent", () => {
       expect(Permission.evaluate("external_directory", path.join(global.tmp, "*"), permissions).effect).toBe("allow")
       expect(Permission.evaluate("external_directory", "/outside/*", permissions).effect).toBe("allow")
       const explore = yield* agent.get(Agent.ID.make("explore"))
-      expect(Permission.evaluate("shell", "git log -5", explore?.permissions ?? []).effect).toBe("allow")
+      for (const command of [
+        "git log -5",
+        "printf changed > tracked.txt",
+        "git status; rm tracked.txt",
+        "echo $(touch tracked.txt)",
+      ]) {
+        expect(Permission.evaluate("shell", command, explore?.permissions ?? []).effect).toBe("deny")
+        expect(Permission.evaluate("shell", command, permissions).effect).toBe("allow")
+      }
       expect(Permission.evaluate("edit", "src/index.ts", explore?.permissions ?? []).effect).toBe("deny")
       expect(Permission.evaluate("read", ".env", explore?.permissions ?? []).effect).toBe("ask")
       expect(Permission.evaluate("read", ".env.local", explore?.permissions ?? []).effect).toBe("ask")

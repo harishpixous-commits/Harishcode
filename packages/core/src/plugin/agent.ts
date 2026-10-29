@@ -79,7 +79,8 @@ export const Plugin = define({
         item.mode = "subagent"
         item.permissions.push(
           { action: "*", resource: "*", effect: "deny" },
-          { action: "shell", resource: "*", effect: "allow" },
+          // Arbitrary shell commands can write; use dedicated read/search tools in Explore.
+          { action: "shell", resource: "*", effect: "deny" },
           { action: "grep", resource: "*", effect: "allow" },
           { action: "glob", resource: "*", effect: "allow" },
           { action: "webfetch", resource: "*", effect: "allow" },

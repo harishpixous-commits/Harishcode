@@ -69,7 +69,7 @@ Build installers with `bun run --cwd packages/desktop build`.
 Two agents ship in the box; switch between them with `Tab`.
 
 - **build** — default, full-access agent for development work.
-- **plan** — read-only agent for analysis and code exploration.
+- **plan** — read-only agent for analysis and code exploration. Shell commands require approval because command parsing is not a read-only sandbox. Approving a shell command can allow it to change files. The Explore subagent uses dedicated read/search tools and cannot run shell commands. Plan does not delegate to subagents, whose agent defaults may be broader. Explicit session/config/plugin policy can override defaults; these modes are not an OS sandbox.
   - Denies file edits by default.
   - Asks permission before running shell commands.
   - Ideal for exploring unfamiliar codebases or planning a change.
