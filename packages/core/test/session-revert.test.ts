@@ -119,3 +119,133 @@ describe("Session.revert files", () => {
     { timeout: 15_000 },
   )
 })
+
+describe("Session.revert recovery characterization (P2 evidence base)", () => {
+  // Simulates one assistant step: snapshot, mutate, capture, publish step events.
+  const simulateStep = (
+    sessionID: Session.ID,
+    mutate: () => Promise<unknown>,
+  ) =>
+    Effect.gen(function* () {
+      const plugins = yield* Plugin.Service
+      yield* plugins.awaitActivation
+      const snapshot = yield* Snapshot.Service
+      const before = yield* snapshot.capture()
+      if (!before) throw new Error("Pre-step snapshot missing")
+      const assistantMessageID = SessionMessage.ID.create()
+      yield* Bus.Service.use((bus) =>
+        bus.publish(SessionEvent.Step.Started, {
+          sessionID,
+          assistantMessageID,
+          agent: Agent.defaultID,
+          model: { id: Model.ID.make("test-model"), providerID: Provider.ID.make("test-provider") },
+          snapshot: before,
+          started: 0,
+        }),
+      )
+      yield* Effect.promise(mutate)
+      const after = yield* snapshot.capture()
+      if (!after) throw new Error("Post-step snapshot missing")
+      const files = yield* snapshot.files({ from: before, to: after })
+      yield* Bus.Service.use((bus) =>
+        bus.publish(SessionEvent.Step.Ended, {
+          sessionID,
+          assistantMessageID,
+          finish: "stop",
+          cost: Money.USD.zero,
+          tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+          snapshot: after,
+          files,
+        }),
+      )
+    })
+
+  const setupProject = Effect.gen(function* () {
+    const tmp = yield* tmpdirScoped()
+    const directory = path.join(tmp.path, "project")
+    yield* Effect.promise(async () => {
+      await fs.mkdir(directory)
+      await Bun.write(path.join(directory, "a.txt"), "a:original\n")
+      await Bun.write(path.join(directory, "b.txt"), "b:original\n")
+      await $`git init -q`.cwd(directory).quiet()
+      await $`git -c core.fsmonitor=false add .`.cwd(directory).quiet()
+    })
+    const session = yield* Session.Service
+    const database = yield* Database.Service
+    const bus = yield* Bus.Service
+    const created = yield* session.create({ location: { directory: AbsolutePath.make(directory) } })
+    return { directory, created, session, database, bus }
+  })
+
+  it.live(
+    "restores only files touched after the revert boundary",
+    () =>
+      Effect.gen(function* () {
+        const { directory, created, session, database, bus } = yield* setupProject
+        const first = yield* session.prompt({ sessionID: created.id, text: "Edit a", resume: false })
+        yield* SessionInbox.promote(database.db, bus, created.id, "steer")
+        yield* Effect.gen(function* () {
+          yield* simulateStep(created.id, () => Bun.write(path.join(directory, "a.txt"), "a:turn1\n"))
+          const second = yield* session.prompt({ sessionID: created.id, text: "Edit b", resume: false })
+          yield* SessionInbox.promote(database.db, bus, created.id, "steer")
+          yield* simulateStep(created.id, () => Bun.write(path.join(directory, "b.txt"), "b:turn2\n"))
+
+          // Revert to before turn 2: b returns to original, a keeps turn 1 content.
+          const reverted = yield* session.revert.stage({ sessionID: created.id, messageID: second.id })
+          expect(yield* Effect.promise(() => Bun.file(path.join(directory, "a.txt")).text())).toBe("a:turn1\n")
+          expect(yield* Effect.promise(() => Bun.file(path.join(directory, "b.txt")).text())).toBe("b:original\n")
+          expect(reverted.files?.map((file) => [file.file, file.status])).toEqual([["b.txt", "modified"]])
+          void first
+        }).pipe(Effect.provide(LocationServiceMap.Service.get(created.location)))
+      }),
+    { timeout: 15_000 },
+  )
+
+  it.live(
+    "a user edit after the turn is overwritten by stage and not recovered by clear",
+    () =>
+      Effect.gen(function* () {
+        const { directory, created, session, database, bus } = yield* setupProject
+        const first = yield* session.prompt({ sessionID: created.id, text: "Edit a", resume: false })
+        yield* SessionInbox.promote(database.db, bus, created.id, "steer")
+        yield* Effect.gen(function* () {
+          yield* simulateStep(created.id, () => Bun.write(path.join(directory, "a.txt"), "a:turn1\n"))
+          // External (user) edit after the turn ends - the conflict case a preview would surface.
+          yield* Effect.promise(() => Bun.write(path.join(directory, "a.txt"), "a:user-edit\n"))
+
+          const stagedRevert = yield* session.revert.stage({ sessionID: created.id, messageID: first.id })
+          // CHARACTERIZATION (P2): stage overwrites the user's post-turn edit without conflict detection.
+          // The staged diff already names what was displaced - this is the visibility gap a conflict
+          // preview would surface before restoring.
+          expect(yield* Effect.promise(() => Bun.file(path.join(directory, "a.txt")).text())).toBe("a:original\n")
+          expect(stagedRevert.files?.map((file) => [file.file, file.status])).toEqual([["a.txt", "modified"]])
+          expect(stagedRevert.files?.[0]?.patch).toContain("-a:user-edit")
+
+          yield* session.revert.clear(created.id)
+          // Clear restores the displaced edit, because the stage-time capture included it.
+          expect(yield* Effect.promise(() => Bun.file(path.join(directory, "a.txt")).text())).toBe("a:user-edit\n")
+        }).pipe(Effect.provide(LocationServiceMap.Service.get(created.location)))
+      }),
+    { timeout: 15_000 },
+  )
+
+  it.live(
+    "message-only stage leaves file contents untouched",
+    () =>
+      Effect.gen(function* () {
+        const { directory, created, session, database, bus } = yield* setupProject
+        yield* session.prompt({ sessionID: created.id, text: "Edit a", resume: false })
+        yield* SessionInbox.promote(database.db, bus, created.id, "steer")
+        yield* Effect.gen(function* () {
+          yield* simulateStep(created.id, () => Bun.write(path.join(directory, "a.txt"), "a:turn1\n"))
+          const prompt2 = yield* session.prompt({ sessionID: created.id, text: "noop", resume: false })
+          yield* SessionInbox.promote(database.db, bus, created.id, "steer")
+          const reverted = yield* session.revert.stage({ sessionID: created.id, messageID: prompt2.id, files: false })
+          expect(yield* Effect.promise(() => Bun.file(path.join(directory, "a.txt")).text())).toBe("a:turn1\n")
+          expect(reverted.files).toEqual([])
+          yield* session.revert.clear(created.id)
+        }).pipe(Effect.provide(LocationServiceMap.Service.get(created.location)))
+      }),
+    { timeout: 15_000 },
+  )
+})
