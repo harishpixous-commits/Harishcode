@@ -52,6 +52,8 @@ export type TurnState = {
   readonly children: ReadonlyMap<string, ACPChild.Session>
   readonly openChildren: ReadonlySet<string>
   readonly asks: ReadonlySet<string>
+  /** Replied-before-asked ids: the server can settle an ask before this stream sees it. */
+  readonly settledAsks: ReadonlySet<string>
   readonly finish?: SessionMessage.Assistant["finish"]
   readonly usage?: { readonly turn: TokenUsage.Info; readonly last: TokenUsage.Info }
   readonly stepError?: SessionError.Error
@@ -88,6 +90,7 @@ export const initial: TurnState = {
   children: new Map(),
   openChildren: new Set(),
   asks: new Set(),
+  settledAsks: new Set(),
 }
 
 export function fold(state: TurnState, event: HarishCodeEvent, ctx: TurnContext): Folded {
@@ -97,6 +100,9 @@ export function fold(state: TurnState, event: HarishCodeEvent, ctx: TurnContext)
   const child = sessionID ? state.children.get(sessionID) : undefined
 
   if (event.type === "permission.asked" && (event.data.sessionID === ctx.sessionID || child)) {
+    // A settle that already arrived (the server can publish replied before asked reaches this
+    // stream, for example its no-reviewer rejection) means there is nothing to wait for.
+    if (state.settledAsks.has(event.data.id)) return { state, outputs: [] }
     const tool = event.data.source?.id
       ? state.tools.get(toolKey(event.data.sessionID, event.data.source.id))
       : undefined
@@ -117,7 +123,11 @@ export function fold(state: TurnState, event: HarishCodeEvent, ctx: TurnContext)
       : event.type === "form.replied" || event.type === "form.cancelled"
         ? event.data.id
         : undefined
-  if (settledID && (sessionID === ctx.sessionID || child) && state.asks.has(settledID)) {
+  if (settledID && (sessionID === ctx.sessionID || child)) {
+    if (!state.asks.has(settledID)) {
+      // Out-of-order settle: remember it so the matching asked, when it arrives, is skipped.
+      return { state: { ...state, settledAsks: new Set(state.settledAsks).add(settledID) }, outputs: [] }
+    }
     const asks = new Set(state.asks)
     asks.delete(settledID)
     return { state: { ...state, asks }, outputs: [{ _tag: "AskSettled", id: settledID }] }

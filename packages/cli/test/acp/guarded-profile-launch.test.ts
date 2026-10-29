@@ -16,7 +16,7 @@ import {
 /** Launches the wire from the actual CLI profile resolver, not hand-set context values. */
 const launchGuarded = async (
   run: (acp: Awaited<ReturnType<typeof startWire>> & { sessionId: string }, workspace: string) => Promise<void>,
-  options: { reviewTimeout?: string; settleTurn?: "external" | "immediate" } = {},
+  options: { reviewTimeout?: string; settleTurn?: "external" | "immediate"; outOfOrderSettle?: boolean } = {},
 ) => {
   const workspace = mkdtempSync(join(tmpdir(), "hc-guarded-launch-"))
   try {
@@ -32,10 +32,22 @@ const launchGuarded = async (
       permissionReviewTimeout: profile.timeout,
       // "external" keeps the turn open until an independent server settlement; "immediate" lets the
       // fixture complete the turn once the review outcome (approval or deadline reject) lands.
-      onPrompt: ({ sessionID, id }) =>
-        options.settleTurn === "immediate"
+      onPrompt: ({ sessionID, id }) => {
+        if (options.outOfOrderSettle)
+          return [
+            delivered(sessionID, id),
+            ephemeralEvent("permission.replied", {
+              sessionID,
+              requestID: "perm_launch",
+              reply: "reject",
+            }),
+            permissionAsked(sessionID, "perm_launch"),
+            succeeded(sessionID),
+          ]
+        return options.settleTurn === "immediate"
           ? turn(sessionID, id, permissionAsked(sessionID, "perm_launch"))
-          : [delivered(sessionID, id), permissionAsked(sessionID, "perm_launch")],
+          : [delivered(sessionID, id), permissionAsked(sessionID, "perm_launch")]
+      },
       permission: () => {
         throw new Error("autoallow client must never be consulted")
       },
@@ -96,3 +108,15 @@ test("launched profile refuses foreign workspaces and stripped-marker sessions",
     rmSync(workspace, { recursive: true, force: true })
   }
 })
+test("server settle published before the ask reaches the stream is honored without stalling", async () =>
+  launchGuarded(
+    async (acp) => {
+      const started = Date.now()
+      expect(await acp.prompt(acp.sessionId, "fixture only")).toMatchObject({ stopReason: "end_turn" })
+      // The ask was already settled server-side: no 10s review-timeout stall, no client fallback.
+      expect(Date.now() - started).toBeLessThan(8000)
+      expect(acp.permissions).toHaveLength(0)
+      expect(acp.server.replies).toHaveLength(0)
+    },
+    { reviewTimeout: "10000", outOfOrderSettle: true },
+  ))
