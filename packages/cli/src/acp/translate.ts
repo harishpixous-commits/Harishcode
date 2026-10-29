@@ -117,7 +117,7 @@ export function fold(state: TurnState, event: HarishCodeEvent, ctx: TurnContext)
       : event.type === "form.replied" || event.type === "form.cancelled"
         ? event.data.id
         : undefined
-  if (settledID && state.asks.has(settledID)) {
+  if (settledID && (sessionID === ctx.sessionID || child) && state.asks.has(settledID)) {
     const asks = new Set(state.asks)
     asks.delete(settledID)
     return { state: { ...state, asks }, outputs: [{ _tag: "AskSettled", id: settledID }] }

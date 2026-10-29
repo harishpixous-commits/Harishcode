@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { Cause, Deferred, Effect, Fiber, Layer, Schema } from "effect"
 import { Agent } from "@harishcode/core/agent"
+import { PluginHooks } from "@harishcode/core/plugin/hooks"
 import { Database } from "@harishcode/core/database/database"
 import { AppNodeBuilder } from "@harishcode/core/effect/app-node-builder"
 import { LayerNode } from "@harishcode/util/effect/layer-node"
@@ -13,6 +14,7 @@ import { Project } from "@harishcode/core/project"
 import { ProjectTable } from "@harishcode/core/project/sql"
 import { AbsolutePath } from "@harishcode/core/schema"
 import { Session } from "@harishcode/core/session"
+import { SessionMessage } from "@harishcode/schema/session-message"
 import { SessionTable } from "@harishcode/core/session/sql"
 import { SessionStore } from "@harishcode/core/session/store"
 import { ShellParse } from "@harishcode/core/shell/parse"
@@ -26,7 +28,15 @@ const current = Layer.succeed(
 )
 const it = testEffect(
   AppNodeBuilder.build(
-    LayerNode.group([Database.node, Bus.node, SessionStore.node, PermissionSaved.node, Agent.node, Permission.node]),
+    LayerNode.group([
+      Database.node,
+      Bus.node,
+      SessionStore.node,
+      PermissionSaved.node,
+      Agent.node,
+      PluginHooks.node,
+      Permission.node,
+    ]),
     [Location.node.replace(current)],
   ),
 )
@@ -785,3 +795,154 @@ describe("shell scanner permission impact", () => {
     }
   }
 })
+
+it.effect("OpenHands review restriction overrides automatic and saved allow, but never configured deny", () =>
+  Effect.gen(function* () {
+    yield* setup([{ action: "*", resource: "*", effect: "allow" }])
+    const { db } = yield* Database.Service
+    const service = yield* Permission.Service
+    const saved = yield* PermissionSaved.Service
+    yield* saved.add({ projectID: Project.ID.global, action: "read", resources: ["*"] })
+    yield* db
+      .update(SessionTable)
+      .set({ metadata: { "harishcode.openhands.requireReview": true } })
+      .where(eq(SessionTable.id, Session.ID.make("ses_test")))
+      .run()
+      .pipe(Effect.orDie)
+    expect(yield* service.ask(assertion())).toMatchObject({ effect: "ask" })
+    yield* service.reply({ requestID: Permission.ID.create("per_test"), reply: "always" })
+    expect(yield* service.ask(assertion({ id: Permission.ID.create("per_next") }))).toMatchObject({ effect: "ask" })
+    yield* service.reply({ requestID: Permission.ID.create("per_next"), reply: "reject" })
+    yield* setRules([{ action: "read", resource: "*", effect: "deny" }])
+    expect(yield* service.ask(assertion())).toMatchObject({ effect: "deny" })
+  }),
+)
+
+it.effect("OpenHands child review follows ancestor even when child or fork metadata is replaced", () =>
+  Effect.gen(function* () {
+    yield* setup([{ action: "*", resource: "*", effect: "allow" }])
+    const { db } = yield* Database.Service
+    const service = yield* Permission.Service
+    yield* db
+      .update(SessionTable)
+      .set({ metadata: { "harishcode.openhands.requireReview": true } })
+      .where(eq(SessionTable.id, Session.ID.make("ses_test")))
+      .run()
+      .pipe(Effect.orDie)
+    yield* db
+      .insert(SessionTable)
+      .values({
+        id: Session.ID.make("ses_child_review"),
+        parent_id: Session.ID.make("ses_test"),
+        project_id: Project.ID.global,
+        slug: "child",
+        directory: "/project",
+        title: "child",
+        version: "test",
+        agent: Agent.ID.make("test"),
+        metadata: { "harishcode.openhands.requireReview": false },
+      })
+      .run()
+      .pipe(Effect.orDie)
+    expect(yield* service.ask(assertion({ sessionID: Session.ID.make("ses_child_review") }))).toMatchObject({
+      effect: "ask",
+    })
+    yield* service.reply({ requestID: Permission.ID.create("per_test"), reply: "reject" })
+    yield* db
+      .update(SessionTable)
+      .set({
+        parent_id: null,
+        fork_session_id: Session.ID.make("ses_test"),
+        fork_boundary: { type: "through", messageID: SessionMessage.ID.make("msg_fork_review") },
+      })
+      .where(eq(SessionTable.id, Session.ID.make("ses_child_review")))
+      .run()
+      .pipe(Effect.orDie)
+    expect(yield* service.ask(assertion({ sessionID: Session.ID.make("ses_child_review") }))).toMatchObject({
+      effect: "ask",
+    })
+    yield* service.reply({ requestID: Permission.ID.create("per_test"), reply: "reject" })
+  }),
+)
+
+it.effect("OpenHands review cannot be upgraded by permission hooks or saved by always", () =>
+  Effect.gen(function* () {
+    yield* setup([{ action: "*", resource: "*", effect: "allow" }])
+    const { db } = yield* Database.Service
+    const service = yield* Permission.Service
+    const saved = yield* PermissionSaved.Service
+    const hooks = yield* PluginHooks.Service
+    yield* hooks.register("permission", "evaluate", (event) =>
+      Effect.sync(() => {
+        event.effect = "allow"
+      }),
+    )
+    yield* db
+      .update(SessionTable)
+      .set({ metadata: { "harishcode.openhands.requireReview": true } })
+      .where(eq(SessionTable.id, Session.ID.make("ses_test")))
+      .run()
+      .pipe(Effect.orDie)
+    expect(yield* service.ask(assertion({ save: ["*"] }))).toMatchObject({ effect: "ask" })
+    yield* service.reply({ requestID: Permission.ID.create("per_test"), reply: "always" })
+    expect(yield* saved.list()).toEqual([])
+    expect(yield* service.ask(assertion({ id: Permission.ID.create("per_next") }))).toMatchObject({ effect: "ask" })
+    yield* service.reply({ requestID: Permission.ID.create("per_next"), reply: "reject" })
+  }),
+)
+
+it.effect("OpenHands review fails closed on cyclic ancestry", () =>
+  Effect.gen(function* () {
+    yield* setup([{ action: "*", resource: "*", effect: "allow" }])
+    const { db } = yield* Database.Service
+    const service = yield* Permission.Service
+    yield* db
+      .update(SessionTable)
+      .set({ parent_id: Session.ID.make("ses_test") })
+      .where(eq(SessionTable.id, Session.ID.make("ses_test")))
+      .run()
+      .pipe(Effect.orDie)
+    expect(yield* service.ask(assertion())).toMatchObject({ effect: "ask" })
+    yield* service.reply({ requestID: Permission.ID.create("per_test"), reply: "reject" })
+  }),
+)
+
+it.effect("pending guarded approval stays one-time if root metadata changes before reply", () =>
+  Effect.gen(function* () {
+    yield* setup([{ action: "*", resource: "*", effect: "allow" }])
+    const { db } = yield* Database.Service
+    const service = yield* Permission.Service
+    const saved = yield* PermissionSaved.Service
+    yield* db
+      .update(SessionTable)
+      .set({ metadata: { "harishcode.openhands.requireReview": true } })
+      .where(eq(SessionTable.id, Session.ID.make("ses_test")))
+      .run()
+      .pipe(Effect.orDie)
+    expect(yield* service.ask(assertion({ save: ["*"] }))).toMatchObject({ effect: "ask" })
+    yield* db
+      .update(SessionTable)
+      .set({ metadata: {} })
+      .where(eq(SessionTable.id, Session.ID.make("ses_test")))
+      .run()
+      .pipe(Effect.orDie)
+    yield* service.reply({ requestID: Permission.ID.create("per_test"), reply: "always" })
+    expect(yield* saved.list()).toEqual([])
+    expect(
+      yield* service.reply({ requestID: Permission.ID.create("per_test"), reply: "once" }).pipe(Effect.flip),
+    ).toMatchObject({ _tag: "Permission.NotFoundError" })
+  }),
+)
+
+
+it.effect("guarded non-interactive permission checks fail closed instead of executing on ask", () =>
+  Effect.gen(function* () {
+    yield* setup([{ action: "*", resource: "*", effect: "allow" }])
+    const { db } = yield* Database.Service
+    const service = yield* Permission.Service
+    yield* service.assertNotDenied(assertion())
+    yield* db.update(SessionTable).set({ metadata: { "harishcode.openhands.requireReview": true } }).where(eq(SessionTable.id, Session.ID.make("ses_test"))).run().pipe(Effect.orDie)
+    expect(yield* service.assertNotDenied(assertion()).pipe(Effect.flip)).toMatchObject({ _tag: "Permission.BlockedError" })
+    expect(yield* service.list()).toEqual([])
+  }),
+)

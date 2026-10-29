@@ -12,6 +12,7 @@ import { SessionStore } from "./session/store.js"
 import { Wildcard } from "./util/wildcard.js"
 import { PermissionSaved } from "./permission/saved.js"
 import { PluginHooks } from "./plugin/hooks.js"
+import { requireReviewKey } from "@harishcode/schema/session-review"
 
 const PermissionEffect = Permission.Effect
 export { PermissionEffect as Effect }
@@ -104,6 +105,7 @@ export class Service extends Context.Service<Service, Interface>()("@harishcode/
 interface Pending {
   readonly request: Request
   readonly agent?: Agent.ID
+  readonly requireReview: boolean
   readonly deferred: Deferred.Deferred<void, DeclinedError | CorrectedError>
 }
 
@@ -159,6 +161,25 @@ const layer = Layer.effect(
       return rules.filter((rule) => Wildcard.match(input.action, rule.action))
     }
 
+    // Restriction is evaluated live through ancestry, not inherited metadata alone.
+    const reviewRequired = Effect.fnUntraced(function* (sessionID: SessionSchema.ID) {
+      const seen = new Set<string>()
+      const queue: SessionSchema.ID[] = [sessionID]
+      while (queue.length) {
+        const id = queue.pop()!
+        if (seen.has(id)) return true
+        if (seen.size >= 256) return true
+        seen.add(id)
+        const session: SessionSchema.Info | undefined = yield* sessions.get(id)
+        if (!session) return true
+        if (session.metadata?.[requireReviewKey] === true) return true
+        if (session.parentID === id || session.fork?.sessionID === id) return true
+        if (session.parentID) queue.push(session.parentID)
+        if (session.fork?.sessionID) queue.push(session.fork.sessionID)
+      }
+      return false
+    })
+
     const evaluateInput = Effect.fnUntraced(function* (input: AssertInput) {
       const rules = yield* configured(input.sessionID, input.agent)
       if (denied(input, rules)) return { effect: "deny" as const, rules }
@@ -174,7 +195,12 @@ const layer = Layer.effect(
         source: input.source,
         effect,
       })
-      return { effect: event.effect, message: event.message, rules: all }
+      const reviewed = yield* reviewRequired(input.sessionID)
+      return {
+        effect: reviewed && event.effect !== "deny" ? ("ask" as const) : event.effect,
+        message: event.message,
+        rules: all,
+      }
     })
 
     function request(input: AssertInput, message?: string): Request {
@@ -198,7 +224,7 @@ const layer = Layer.effect(
       Effect.uninterruptible(
         Effect.gen(function* () {
           const deferred = yield* Deferred.make<void, DeclinedError | CorrectedError>()
-          const item = { request, agent, deferred }
+          const item = { request, agent, deferred, requireReview: yield* reviewRequired(request.sessionID) }
           if (closed) {
             yield* Deferred.fail(deferred, new DeclinedError())
             return item
@@ -257,7 +283,9 @@ const layer = Layer.effect(
 
     const assertNotDenied = Effect.fn("Permission.assertNotDenied")(function* (input: AssertInput) {
       const result = yield* evaluateInput(input)
-      if (result.effect !== "deny") return
+      // Non-interactive tool paths cannot collect approval. Guarded sessions block
+      // them rather than treating an 'ask' result as permission to execute.
+      if (result.effect !== "deny" && !(yield* reviewRequired(input.sessionID))) return
       return yield* new BlockedError({
         rules: relevant(input, result.rules),
         permission: input.action,
@@ -271,13 +299,18 @@ const layer = Layer.effect(
         Effect.gen(function* () {
           const existing = pending.get(input.requestID)
           if (!existing) return yield* new NotFoundError({ requestID: input.requestID })
+          // In guarded sessions 'always' means this request only and never writes a saved grant.
+          const decision =
+            input.reply === "always" && (existing.requireReview || (yield* reviewRequired(existing.request.sessionID)))
+              ? "once"
+              : input.reply
           yield* bus.publish(Permission.Event.Replied, {
             sessionID: existing.request.sessionID,
             requestID: existing.request.id,
-            reply: input.reply,
+            reply: decision,
           })
 
-          if (input.reply === "reject") {
+          if (decision === "reject") {
             yield* Deferred.fail(
               existing.deferred,
               input.message ? new CorrectedError({ feedback: input.message }) : new DeclinedError(),
@@ -300,7 +333,7 @@ const layer = Layer.effect(
             return
           }
 
-          if (input.reply === "always" && existing.request.save?.length) {
+          if (decision === "always" && existing.request.save?.length) {
             yield* saved.add({
               projectID: location.project.id,
               action: existing.request.action,
@@ -309,7 +342,7 @@ const layer = Layer.effect(
           }
           yield* Deferred.succeed(existing.deferred, undefined)
           pending.delete(input.requestID)
-          if (input.reply !== "always" || !existing.request.save?.length) return
+          if (decision !== "always" || !existing.request.save?.length) return
 
           for (const [id, item] of pending) {
             const result = yield* evaluateInput({ ...item.request, agent: item.agent }).pipe(

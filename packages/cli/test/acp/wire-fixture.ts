@@ -145,6 +145,9 @@ export type WireOptions = {
     request: CreateElicitationRequest,
     signal: AbortSignal,
   ) => CreateElicitationResponse | Promise<CreateElicitationResponse>
+  readonly permissionReview?: "client" | "harishcode"
+  readonly permissionReviewTimeout?: Duration.Input
+  readonly reviewWorkspace?: string
   readonly cancelDrainTimeout?: Duration.Input
 }
 
@@ -432,6 +435,9 @@ export async function startWire(options: WireOptions = {}) {
       Effect.provide(FetchHttpClient.layer),
       Effect.flatMap((client) => ACP.connect(client, ndJsonStream(agentToClient.writable, clientToAgent.readable))),
       Scope.provide(agentScope),
+      Effect.provideService(ACPTurn.PermissionReview, options.permissionReview ?? "client"),
+      Effect.provideService(ACPTurn.ReviewWorkspace, options.reviewWorkspace),
+      Effect.provideService(ACPTurn.PermissionReviewTimeout, options.permissionReviewTimeout ?? "60 seconds"),
       (effect) =>
         options.cancelDrainTimeout === undefined
           ? effect
