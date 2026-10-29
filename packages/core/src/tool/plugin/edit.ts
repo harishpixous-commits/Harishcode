@@ -298,6 +298,31 @@ export const Plugin = {
                     : `No changes to apply: the edit leaves ${input.path} unchanged. Line endings follow the file; to change them, write \\r explicitly in oldString or newString.`,
                 })
               }
+              // Revalidate the base the approval preview was computed from; an external change
+              // between preparation and the post-approval commit fails the edit instead of
+              // overwriting newer content. The check and the write still race non-cooperating
+              // external writers - no OS-level compare-and-swap is claimed.
+              const current = yield* FileMutation.readText(environment.files, target.absolute).pipe(
+                Effect.catchTags({
+                  "Environment.NotFound": () =>
+                    Effect.fail(
+                      new ToolFailure({
+                        message: `${input.path} was deleted after the edit preview was prepared, so the edit was not applied. Read the file again and retry.`,
+                      }),
+                    ),
+                  "Environment.WrongKind": () =>
+                    Effect.fail(
+                      new ToolFailure({
+                        message: `${input.path} changed after the edit preview was prepared, so the edit was not applied. Read the file again and retry.`,
+                      }),
+                    ),
+                }),
+              )
+              if (current.text !== original.text || current.bom !== original.bom) {
+                return yield* new ToolFailure({
+                  message: `${input.path} changed after the edit preview was prepared, so the edit was not applied. Read the file again and retry.`,
+                })
+              }
               const replacementBom = replaced.startsWith("\uFEFF")
               const result = yield* fileMutation.write({
                 target,

@@ -776,7 +776,11 @@ describe("EditTool", () => {
     }),
   )
 
-  it.live("applies the edit when content changes after matching", () =>
+  // Changed-base protection (deliberate semantics change; the previous version of this test,
+  // "applies the edit when content changes after matching", blessed the stale overwrite and
+  // expected "after\n"): an external change between the prepared preview and the post-approval
+  // commit now fails the edit and preserves the newer content.
+  it.live("fails and preserves newer content when the file changes after matching", () =>
     withTempDir((tmp) => {
       const edit = makeEditFixture()
       const target = path.join(tmp.path, "concurrent.txt")
@@ -785,6 +789,28 @@ describe("EditTool", () => {
         Effect.andThen(
           withTool(tmp.path, edit, (registry) =>
             executeTool(registry, call({ path: "concurrent.txt", oldString: "before", newString: "after" })),
+          ),
+        ),
+        Effect.andThen((result) =>
+          Effect.gen(function* () {
+            expect(result.status).toBe("error")
+            expect(result.error?.message).toContain("changed after the edit preview was prepared")
+            expect(yield* Effect.promise(() => fs.readFile(target, "utf8"))).toBe("newer\n")
+            expect(edit.writes).toEqual([])
+          }),
+        ),
+      )
+    }),
+  )
+
+  it.live("applies the edit when the base is unchanged through approval", () =>
+    withTempDir((tmp) => {
+      const edit = makeEditFixture()
+      const target = path.join(tmp.path, "stable.txt")
+      return Effect.promise(() => fs.writeFile(target, "before\n")).pipe(
+        Effect.andThen(
+          withTool(tmp.path, edit, (registry) =>
+            executeTool(registry, call({ path: "stable.txt", oldString: "before", newString: "after" })),
           ),
         ),
         Effect.andThen((result) =>

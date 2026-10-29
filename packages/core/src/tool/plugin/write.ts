@@ -14,6 +14,7 @@ import { Environment } from "../../environment/index.js"
 import { FileMutation } from "../../file-mutation.js"
 import { Formatter } from "../../formatter.js"
 import { FileAccess } from "../../file-access.js"
+import { Location } from "../../location.js"
 import { Permission } from "../../permission.js"
 import { fileDiff } from "./file-diff.js"
 
@@ -50,6 +51,7 @@ export const Plugin = {
     const fileMutation = yield* FileMutation.Service
     const environment = yield* Environment.Service
     const formatter = yield* Formatter.Service
+    const location = yield* Location.Service
     const permission = yield* Permission.Service
 
     yield* ctx.tool
@@ -84,6 +86,30 @@ export const Plugin = {
                 agent: context.agent,
                 source,
               })
+              // Revalidate the base the approval preview was computed from; an external change
+              // between preparation and the post-approval commit fails the write instead of
+              // overwriting newer content. The check and the write still race non-cooperating
+              // external writers - no OS-level compare-and-swap is claimed.
+              const latest = yield* FileMutation.readText(environment.files, target.absolute).pipe(
+                Effect.catchTags({
+                  "Environment.NotFound": () => Effect.undefined,
+                  "Environment.WrongKind": () =>
+                    Effect.fail(
+                      new ToolFailure({
+                        message: `${input.path} changed after the write preview was prepared, so the write was not applied. Read the file again and retry.`,
+                      }),
+                    ),
+                }),
+              )
+              const unchanged =
+                latest === undefined
+                  ? current === undefined
+                  : current !== undefined && current.bom === latest.bom && current.text === latest.text
+              if (!unchanged) {
+                return yield* new ToolFailure({
+                  message: `${input.path} changed after the write preview was prepared, so the write was not applied. Read the file again and retry.`,
+                })
+              }
               const result = yield* fileMutation.writeTextPreservingBom({ target, content: input.content })
               const bom = (yield* FileMutation.readText(environment.files, target.absolute)).bom
               if (yield* formatter.file(target.absolute)) {
@@ -91,6 +117,7 @@ export const Plugin = {
               }
               return result
             }).pipe(
+              fileMutation.withLock([FileAccess.resolvePath(location.directory, input.path)]),
               Effect.map((output) => ({ output, content: toModelContent(output) })),
               Effect.mapError((error) => new ToolFailure({ message: `Unable to write ${input.path}`, error })),
             ),

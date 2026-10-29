@@ -114,6 +114,9 @@ export const Plugin = {
               }
               const prepared: Prepared[] = []
               const updates = new Map<string, string | null>()
+              // First on-disk state per target the approval preview was prepared from: exact
+              // bytes with BOM, or null when the path did not exist. Revalidated after approval.
+              const diskBase = new Map<string, { readonly resource: string; readonly base: string | null }>()
               const resolveTarget = Effect.fnUntraced(function* (value: string) {
                 const target = yield* access.resolve({ path: value, kind: "file" })
                 if (!target.externalDirectory) return target
@@ -129,11 +132,25 @@ export const Plugin = {
                   if (hunk.type === "add") {
                     const content =
                       hunk.contents.endsWith("\n") || hunk.contents === "" ? hunk.contents : `${hunk.contents}\n`
+                    // Add overwrites an existing target, so the approval diff must show the
+                    // actual bytes being replaced and the commit must revalidate them.
+                    const existing = yield* FileMutation.readText(environment.files, target.absolute).pipe(
+                      Effect.catchTags({
+                        "Environment.NotFound": () => Effect.undefined,
+                        "Environment.WrongKind": () => Effect.undefined,
+                      }),
+                    )
+                    if (!diskBase.has(target.absolute)) {
+                      diskBase.set(target.absolute, {
+                        resource: target.resource,
+                        base: existing ? Bom.join(existing.text, existing.bom) : null,
+                      })
+                    }
                     prepared.push({
                       ...hunk,
                       target,
                       content,
-                      before: "",
+                      before: existing?.text ?? "",
                       after: Bom.split(content).text,
                     })
                     updates.set(target.absolute, content)
@@ -149,14 +166,23 @@ export const Plugin = {
                     const before =
                       previous !== undefined
                         ? Bom.split(previous).text
-                        : (yield* FileMutation.readText(environment.files, target.absolute).pipe(
+                        : yield* FileMutation.readText(environment.files, target.absolute).pipe(
+                            Effect.map((disk) => {
+                              if (!diskBase.has(target.absolute)) {
+                                diskBase.set(target.absolute, {
+                                  resource: target.resource,
+                                  base: Bom.join(disk.text, disk.bom),
+                                })
+                              }
+                              return disk.text
+                            }),
                             Effect.mapError(
                               (error) =>
                                 new ToolFailure({
                                   message: `patch verification failed: Failed to delete ${target.resource}: ${errorMessage(error)}`,
                                 }),
                             ),
-                          )).text
+                          )
                     prepared.push({ ...hunk, target, before, after: "" })
                     updates.set(target.absolute, null)
                     return
@@ -178,7 +204,11 @@ export const Plugin = {
                             }),
                         ),
                       )
-                      return Bom.join(content.text, content.bom)
+                      const joined = Bom.join(content.text, content.bom)
+                      if (!diskBase.has(target.absolute)) {
+                        diskBase.set(target.absolute, { resource: target.resource, base: joined })
+                      }
+                      return joined
                     }))
                   const before = Bom.split(original).text
                   const update = yield* Effect.try({
@@ -187,6 +217,18 @@ export const Plugin = {
                   })
                   const move = hunk.movePath ? yield* resolveTarget(hunk.movePath) : undefined
                   const moveTarget = move && move.absolute !== target.absolute ? move : undefined
+                  if (moveTarget && !diskBase.has(moveTarget.absolute)) {
+                    const destination = yield* FileMutation.readText(environment.files, moveTarget.absolute).pipe(
+                      Effect.catchTags({
+                        "Environment.NotFound": () => Effect.undefined,
+                        "Environment.WrongKind": () => Effect.undefined,
+                      }),
+                    )
+                    diskBase.set(moveTarget.absolute, {
+                      resource: moveTarget.resource,
+                      base: destination ? Bom.join(destination.text, destination.bom) : null,
+                    })
+                  }
                   const next = Patch.joinBom(update.content, update.bom)
                   prepared.push({
                     ...hunk,
@@ -229,6 +271,38 @@ export const Plugin = {
                 agent: context.agent,
                 source,
               })
+
+              // Revalidate every disk-touched target against the exact bytes the approval
+              // preview was prepared from; a changed base fails the whole patch before any
+              // file is applied. The check and the writes still race non-cooperating external
+              // writers - no OS-level compare-and-swap is claimed.
+              yield* Effect.forEach(
+                [...diskBase.entries()],
+                ([absolute, entry]) =>
+                  Effect.gen(function* () {
+                    const current = yield* FileMutation.readText(environment.files, absolute).pipe(
+                      Effect.catchTags({
+                        "Environment.NotFound": () => Effect.undefined,
+                        "Environment.WrongKind": () =>
+                          Effect.fail(
+                            new ToolFailure({
+                              message: `patch verification failed: ${entry.resource} changed after the patch preview was prepared, so no files were applied. Review the changes and try again.`,
+                            }),
+                          ),
+                      }),
+                    )
+                    const unchanged =
+                      entry.base === null
+                        ? current === undefined
+                        : current !== undefined && Bom.join(current.text, current.bom) === entry.base
+                    if (!unchanged) {
+                      return yield* new ToolFailure({
+                        message: `patch verification failed: ${entry.resource} changed after the patch preview was prepared, so no files were applied. Review the changes and try again.`,
+                      })
+                    }
+                  }),
+                { discard: true },
+              )
 
               yield* Effect.forEach(
                 prepared,

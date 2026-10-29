@@ -25,7 +25,15 @@ import { toolIdentity, executeTool, registerToolPlugin, toolDefinitions } from "
 const writeToolNode = makeLocationNode({
   name: "test/write-tool-plugin",
   layer: Layer.effectDiscard(registerToolPlugin(WriteTool.Plugin)),
-  deps: [Tool.node, FileAccess.node, FileMutation.node, Environment.node, Formatter.node, Permission.node],
+  deps: [
+    Tool.node,
+    FileAccess.node,
+    FileMutation.node,
+    Environment.node,
+    Formatter.node,
+    Location.node,
+    Permission.node,
+  ],
 })
 
 const sessionID = Session.ID.make("ses_write_tool_test")
@@ -34,16 +42,19 @@ const makeWriteFixture = () => {
     assertions: Permission.AssertInput[]
     writes: string[]
     denyAction?: string
+    afterAssert: () => Effect.Effect<void>
     formatFile: (target: string) => Effect.Effect<boolean>
   } = {
     assertions: [],
     writes: [],
+    afterAssert: () => Effect.void,
     formatFile: () => Effect.succeed(false),
   }
 
   const permission = permissionLayer({
     assert: (input) =>
       Effect.sync(() => fixture.assertions.push(input)).pipe(
+        Effect.andThen(input.action === "edit" ? Effect.suspend(() => fixture.afterAssert()) : Effect.void),
         Effect.andThen(
           input.action === fixture.denyAction
             ? Effect.fail(
@@ -398,5 +409,49 @@ describe("WriteTool", () => {
           Promise.all([active[Symbol.asyncDispose](), outside[Symbol.asyncDispose]()]).then(() => undefined),
         ),
     ),
+  )
+  // Changed-base protection: an external change between the prepared write preview and the
+  // post-approval commit fails the write and preserves the newer content.
+  it.live("fails and preserves newer content when the target changes after the write preview", () =>
+    withTempDir((tmp) => {
+      const fixture = makeWriteFixture()
+      const target = path.join(tmp.path, "target.txt")
+      fixture.afterAssert = () => Effect.promise(() => fs.writeFile(target, "newer\n")).pipe(Effect.orDie)
+      return Effect.promise(() => fs.writeFile(target, "before\n")).pipe(
+        Effect.andThen(
+          withTool(tmp.path, fixture, (registry) =>
+            executeTool(registry, call({ path: "target.txt", content: "replacement\n" })),
+          ),
+        ),
+        Effect.andThen((result) =>
+          Effect.gen(function* () {
+            expect(result.status).toBe("error")
+            expect(result.error?.message).toContain("changed after the write preview was prepared")
+            expect(yield* Effect.promise(() => fs.readFile(target, "utf8"))).toBe("newer\n")
+            expect(fixture.writes).toEqual([])
+          }),
+        ),
+      )
+    }),
+  )
+
+  it.live("fails and preserves a target that appears after the write preview", () =>
+    withTempDir((tmp) => {
+      const fixture = makeWriteFixture()
+      const target = path.join(tmp.path, "appeared.txt")
+      fixture.afterAssert = () => Effect.promise(() => fs.writeFile(target, "winner\n")).pipe(Effect.orDie)
+      return withTool(tmp.path, fixture, (registry) =>
+        executeTool(registry, call({ path: "appeared.txt", content: "replacement\n" })),
+      ).pipe(
+        Effect.andThen((result) =>
+          Effect.gen(function* () {
+            expect(result.status).toBe("error")
+            expect(result.error?.message).toContain("changed after the write preview was prepared")
+            expect(yield* Effect.promise(() => fs.readFile(target, "utf8"))).toBe("winner\n")
+            expect(fixture.writes).toEqual([])
+          }),
+        ),
+      )
+    }),
   )
 })
