@@ -15,7 +15,9 @@ import { Agent } from "@harishcode/schema/agent"
 import { Session } from "@harishcode/schema/session"
 import { SessionMessage } from "@harishcode/schema/session-message"
 import type { Info } from "@harishcode/schema/tool"
-import { Fiber, Effect, Schema } from "effect"
+import { Deferred, Fiber, Effect, Schema } from "effect"
+import { TestClock } from "effect/testing"
+import { it } from "./lib/effect"
 
 const context = {
   sessionID: Session.ID.make("ses_execute"),
@@ -198,14 +200,13 @@ test("executions share the prepared runtime of an inventory while keeping per-ca
   }
 
   expect(CodeModeTool.catalog(inventory).tools).toHaveLength(1)
-  const results = await Effect.runPromise(Effect.all([run("first"), run("second")], { concurrency: "unbounded" }))
+  const results = await Effect.runPromise(
+    Effect.all([run("first"), run("second")], { concurrency: "unbounded" }).pipe(Effect.provide(TestClock.layer())),
+  )
   expect<unknown>(results).toEqual(
     ["first", "second"].map((id) => ({
       output: `${id}:${id}`,
-      progress: [
-        { toolCalls: [{ tool: "echo", status: "running", input: { value: id } }] },
-        { toolCalls: [{ tool: "echo", status: "completed", input: { value: id } }] },
-      ],
+      progress: [{ toolCalls: [{ tool: "echo", status: "running", input: { value: id } }] }],
     })),
   )
   expect(
@@ -522,3 +523,58 @@ test("origin-scoped save pattern matches same origin and fails closed on port, u
   }
   expect(Wildcard.match("https://example.com:443/", pattern)).toBe(false)
 })
+
+const progressCodeMode = (started: Deferred.Deferred<void>, wait: Effect.Effect<void>) =>
+  createCodeMode(
+    new Map<string, Info>([
+      [
+        "step",
+        {
+          name: "step",
+          description: "Step",
+          input: Schema.Struct({}),
+          output: Schema.String,
+          execute: () => Effect.succeed({ output: "ok" }),
+        },
+      ],
+      [
+        "wait",
+        {
+          name: "wait",
+          description: "Wait",
+          input: Schema.Struct({}),
+          output: Schema.String,
+          execute: () => Deferred.succeed(started, undefined).pipe(Effect.andThen(wait), Effect.as({ output: "ok" })),
+        },
+      ],
+    ]),
+  )
+
+const row = (tool: string, status: string) => ({ tool, status })
+
+it.effect("execute sends at most one progress update per 100 ms with the latest rows", () =>
+  Effect.gen(function* () {
+    const started = yield* Deferred.make<void>()
+    const progress: Array<Tool.Metadata> = []
+    const fiber = yield* progressCodeMode(started, Effect.sleep("250 millis"))
+      .execute(
+        { code: "for (const i of [1, 2, 3]) await tools.step({}); await tools.wait({}); return await tools.step({})" },
+        { ...context, progress: (update) => Effect.sync(() => progress.push(update)) },
+      )
+      .pipe(Effect.forkChild({ startImmediately: true }))
+    yield* Deferred.await(started)
+    yield* Effect.yieldNow
+    expect(progress).toEqual([{ toolCalls: [row("step", "running")] }])
+
+    yield* TestClock.adjust("100 millis")
+    const steps = [row("step", "completed"), row("step", "completed"), row("step", "completed")]
+    expect(progress.slice(1)).toEqual([{ toolCalls: [...steps, row("wait", "running")] }])
+
+    // The wait ends 150 ms after the trailing update, so its row goes out at once; the last step's never does.
+    yield* TestClock.adjust("150 millis")
+    const result = yield* Fiber.join(fiber)
+    yield* TestClock.adjust("1 second")
+    expect(progress.slice(2)).toEqual([{ toolCalls: [...steps, row("wait", "completed")] }])
+    expect(result.metadata).toEqual({ toolCalls: [...steps, row("wait", "completed"), row("step", "completed")] })
+  }),
+)
