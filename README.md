@@ -5,8 +5,8 @@
 <h1 align="center">Harish Code</h1>
 
 <p align="center">
-  <strong>The open source AI coding agent — Harish Code edition.</strong><br/>
-  A desktop coding agent for Windows, rebuilt and rebranded by
+  <strong>The open source AI coding agent.</strong><br/>
+  A desktop coding agent for Windows, built and maintained by
   <a href="https://github.com/harishpixous-commits">@harishpixous-commits</a>.
 </p>
 
@@ -21,12 +21,13 @@
 
 ## What is Harish Code?
 
-Harish Code is a **rebranded distribution** of the open source [OpenCode](https://github.com/anomalyco/opencode)
-desktop coding agent. The application logic is unchanged; the identity, artwork,
-colour usage, copy and About page are Harish Code's.
+Harish Code is a desktop coding agent for Windows. It runs entirely on your
+own machine, keeps your sessions local, and works with the free model providers
+that ship with the app, plus Ollama and any OpenAI-compatible endpoint you
+configure.
 
-It runs entirely on your machine and works with the free model providers that
-ship with the app, plus Ollama and any OpenAI-compatible endpoint you configure.
+Ask it to write, explain, refactor or review code — it reads your project,
+runs commands, and keeps every conversation attached to the folder you opened.
 
 ## Features
 
@@ -103,6 +104,6 @@ light/dark theme automatically.
 
 MIT — see [LICENSE](LICENSE).
 
-Harish Code is an independent rebrand. It is **not** affiliated with or endorsed
-by Anomaly Innovations, Inc. The upstream MIT notice is retained as the licence
-requires; see [NOTICE](NOTICE) for the full attribution chain.
+Third-party components bundled with the desktop runtime carry their own
+licences; see [NOTICE](NOTICE) for the attribution list. Every bundled library
+retains its original licence and copyright notice, as those licences require.

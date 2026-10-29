@@ -10,7 +10,7 @@ The application logic tracks upstream OpenCode `2.2.0`.
 - Window title, application name, menu labels, user agent and executable
   metadata (`ProductName`, `FileDescription`, `CompanyName`) are *Harish Code*.
 - Update channel pinned to `pixcode` so an upstream release cannot silently
-  overwrite the rebranded build.
+  overwrite this build.
 - Desktop and Start Menu shortcuts written as **Harish Code**; stale shortcuts
   pointing at the previous install removed; shell icon cache refreshed.
 
@@ -29,7 +29,7 @@ The application logic tracks upstream OpenCode `2.2.0`.
 
 ### Copy
 
-- 3,741 user-facing strings rebranded across every locale bundle.
+- 3,741 user-facing strings updated across every locale bundle.
 - Inflected Nordic forms (`OpenCoden`, `OpenCodea`, `OpenCodes`) fixed in the
   Finnish, Danish and Swedish bundles — 19 strings across 7 files.
 - Provider label in the model picker reads **Harish Code** instead of the
@@ -45,6 +45,16 @@ The application logic tracks upstream OpenCode `2.2.0`.
 - Removed the *Anomaly Innovations* trademark line and copyright; replaced with
   *Harish Code — a project by @Harish Innovations* and *© Harish Innovations*.
 - Removed the "and 1055 others" contributor chip.
+
+### Added
+
+- **Refresh button on the model list.** *Settings → Models* now shows a refresh
+  control next to each provider group header (including **Harish Code Free**).
+  Clicking it re-queries the local server's model and provider catalog and then
+  reloads the renderer, so models added behind the app's back — a new Ollama
+  pull, a new remote model from an OpenAI-compatible endpoint — appear without
+  restarting Harish Code. The icon spins while the catalog is fetched and
+  respects `prefers-reduced-motion`.
 
 ### Fixed
 
