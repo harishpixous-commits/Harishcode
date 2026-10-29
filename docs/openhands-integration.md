@@ -72,17 +72,21 @@ results; the composed fake-model workflow test remains pending.
   which validate their own one-time ticket or code.
 - Checked log paths: the only URL-logging middleware is Effect's `HttpMiddleware.logger`
   (used for status >= 400 responses), which strips query and hash before logging; schema-error
-  logs carry route patterns (`METHOD /path/:param`), never request URLs. A schema-rejection
-  reason can echo a malformed (never successfully decoded) query value, which cannot be a
-  valid credential. Other server/ACP log sites are operational (session IDs, RPC method
-  names, causes). No universal never-logs-tokens property is claimed beyond these traced paths.
+  logs carry route patterns (`METHOD /path/:param`), never request URLs. Query-stripping is
+  proven only for that traced logger path. Schema-rejection reasons echo the failing field's
+  message text, which can contain arbitrary query text including secret-looking values, so no
+  credential-redaction guarantee is claimed for them; other server/ACP log sites are
+  operational (session IDs, RPC method names, causes).
 - The server's stdin pipe is the ownership lease: the server exits when the launcher dies.
 - Guarded permission asks never reach the ACP client. With no reviewer connected the server
   rejects them immediately; with a reviewer present they settle on the reviewer's reply or
   reject after `--review-timeout`. A reviewer disconnect rejects pending guarded asks.
-  Residual: a guarded prompt with no reviewer connected spends model tokens until the first
-  permission ask rejects. A prompt-start presence preflight would need a new presence-query
-  endpoint; no existing API exposes reviewer count, and the bounded spend is accepted for now.
+  Residual (missing reviewer preflight): with no reviewer connected, a guarded prompt still
+  runs the model - it may work for a long time or even complete without any permission ask,
+  and auto-allowed operations consume model tokens regardless. No spend bound is claimed.
+  A prompt-start presence preflight would need a new presence-query endpoint (no existing API
+  exposes reviewer count); it is deferred as not necessary for a correct connection, and
+  budget limits are a separate, unaddressed concern.
 - The reviewer subscription is transport binding only, not an authenticated reviewer identity;
   pairing-scoped reviewer identity remains follow-up work.
 
