@@ -49,6 +49,9 @@ const Replied = ephemeral({
     sessionID: SessionID,
     requestID: ID,
     reply: Reply,
+    // Server-stamped identity of the replier (for example a reviewer-presence token holder),
+    // never client-supplied in the event itself. Absent for system-initiated settles.
+    repliedBy: Schema.String.pipe(optional),
   },
 })
 export const Event = { Asked, Replied, Definitions: inventory(Asked, Replied) }

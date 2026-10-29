@@ -40,6 +40,12 @@ export interface ReplyInput {
   readonly requestID: ID
   readonly reply: Reply
   readonly message?: string
+  /**
+   * Server-stamped identity of the replier (for example the holder of a reviewer-presence
+   * token). Callers below the transport layer leave this unset; it is published on the
+   * permission.replied event so reviewers and auditors can see who settled the request.
+   */
+  readonly repliedBy?: string
 }
 
 export interface AskResult {
@@ -95,6 +101,8 @@ export interface Interface {
   /** Fails only when the rules deny the request; never asks the user. */
   readonly assertNotDenied: (input: AssertInput) => Effect.Effect<void, BlockedError | SessionErrors.NotFoundError>
   readonly reply: (input: ReplyInput) => Effect.Effect<void, NotFoundError>
+  /** True when the session or any ancestor carries the review-required marker. */
+  readonly reviewRequired: (sessionID: SessionSchema.ID) => Effect.Effect<boolean>
   readonly get: (id: ID) => Effect.Effect<Request | undefined>
   readonly forSession: (sessionID: SessionSchema.ID) => Effect.Effect<ReadonlyArray<Request>>
   readonly list: () => Effect.Effect<ReadonlyArray<Request>>
@@ -308,6 +316,7 @@ const layer = Layer.effect(
             sessionID: existing.request.sessionID,
             requestID: existing.request.id,
             reply: decision,
+            repliedBy: input.repliedBy,
           })
 
           if (decision === "reject") {
@@ -322,6 +331,7 @@ const layer = Layer.effect(
                 sessionID: item.request.sessionID,
                 requestID: item.request.id,
                 reply: "reject",
+                repliedBy: input.repliedBy,
               })
               // Feedback applies to the whole batch, so parallel asks don't end the step.
               yield* Deferred.fail(
@@ -373,7 +383,7 @@ const layer = Layer.effect(
       return Array.from(pending.values(), (item) => item.request).filter((request) => request.sessionID === sessionID)
     })
 
-    return Service.of({ ask, assert, assertNotDenied, reply, get, forSession, list, close })
+    return Service.of({ ask, assert, assertNotDenied, reply, reviewRequired, get, forSession, list, close })
   }),
 )
 

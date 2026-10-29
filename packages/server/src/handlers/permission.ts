@@ -6,8 +6,14 @@ import { Session } from "@harishcode/core/session"
 import { Effect } from "effect"
 import { HttpApiBuilder, HttpApiSchema } from "effect/http-api"
 import { Api } from "../api"
-import { ConflictError, PermissionNotFoundError, PermissionSavedNotFoundError } from "@harishcode/protocol/errors"
+import {
+  ConflictError,
+  ForbiddenError,
+  PermissionNotFoundError,
+  PermissionSavedNotFoundError,
+} from "@harishcode/protocol/errors"
 import { locationErrors, response, sessionInfo } from "../location"
+import { ReviewerPresence } from "../reviewer-presence"
 import { missingSession } from "./session-error"
 
 function missingRequest(id: Permission.ID) {
@@ -18,6 +24,7 @@ export const PermissionHandler = HttpApiBuilder.group(Api, "server.permission", 
   Effect.gen(function* () {
     const instances = yield* Instance.Service
     const sessions = yield* Session.Service
+    const presence = yield* ReviewerPresence.Service
     const requireOwnedRequest = Effect.fnUntraced(function* (
       sessionID: Permission.Request["sessionID"],
       requestID: Permission.ID,
@@ -77,8 +84,26 @@ export const PermissionHandler = HttpApiBuilder.group(Api, "server.permission", 
         "session.permission.reply",
         Effect.fn(function* (ctx) {
           const owned = yield* requireOwnedRequest(ctx.params.sessionID, ctx.params.requestID)
+          let repliedBy: string | undefined
+          if (ctx.payload.decision !== "reject" && (yield* owned.permission.reviewRequired(ctx.params.sessionID))) {
+            // Guarded sessions accept approvals only from a connection holding a live reviewer
+            // token (see ReviewerPresence). Rejects always go through so a missing or stale
+            // token can never wedge a decline.
+            const reviewer =
+              ctx.payload.reviewer === undefined ? undefined : yield* presence.verify(ctx.payload.reviewer)
+            if (reviewer === undefined)
+              return yield* new ForbiddenError({
+                message: "Guarded sessions may only be approved by a connected reviewing UI",
+              })
+            repliedBy = `reviewer:${reviewer}`
+          }
           yield* owned.permission
-            .reply({ requestID: ctx.params.requestID, reply: ctx.payload.decision, message: ctx.payload.message })
+            .reply({
+              requestID: ctx.params.requestID,
+              reply: ctx.payload.decision,
+              message: ctx.payload.message,
+              repliedBy,
+            })
             .pipe(Effect.catchTag("Permission.NotFoundError", () => missingRequest(ctx.params.requestID)))
           return HttpApiSchema.NoContent.make()
         }),

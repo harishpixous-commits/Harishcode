@@ -1324,7 +1324,7 @@ const EndpointPermissionReply = (raw: RawClient["server.permission"]) => (input:
   preserveEffect<PermissionReplyOutput>()(
     raw["session.permission.reply"]({
       params: { sessionID: input["sessionID"], requestID: input["requestID"] },
-      payload: { decision: input["decision"], message: input["message"] },
+      payload: { decision: input["decision"], message: input["message"], reviewer: input["reviewer"] },
     }).pipe(Effect.mapError(mapClientError)),
   )
 
@@ -1404,7 +1404,7 @@ const adaptGroupRpc = (raw: RawClient["server.rpc"]) => ({ call: EndpointRpcCall
 const EndpointEventSubscribe = (raw: RawClient["server.event"]) => (input?: EventSubscribeInput) =>
   preserveStream<EventSubscribeOutput>()(
     Stream.unwrap(
-      raw["event.subscribe"]({ query: { types: input?.["types"] } }).pipe(
+      raw["event.subscribe"]({ query: { types: input?.["types"], review: input?.["review"] } }).pipe(
         Effect.mapError(mapClientError),
         Effect.map((stream) => stream.pipe(Stream.mapError(mapClientError))),
       ),

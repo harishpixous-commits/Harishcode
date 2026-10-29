@@ -1754,7 +1754,7 @@ export type PermissionReplied = {
   metadata?: { [x: string]: any }
   type: "permission.replied"
   location?: LocationRef
-  data: { sessionID: SessionID; requestID: PermissionID; reply: PermissionReply }
+  data: { sessionID: SessionID; requestID: PermissionID; reply: PermissionReply; repliedBy?: string }
 }
 
 export type PluginUpdated = {
@@ -4128,6 +4128,7 @@ export type PermissionReplyInput = {
   readonly requestID: string
   readonly decision: "once" | "always" | "reject"
   readonly message?: string | undefined
+  readonly reviewer?: string | undefined
 }
 
 export type PermissionReplyOutput = void
@@ -4294,6 +4295,7 @@ export type EventSubscribeInput = {
         | `${"rpc."}${string}`
       >
     | undefined
+  readonly review?: "true" | undefined
 }
 
 export type EventSubscribeOutput = V2Event

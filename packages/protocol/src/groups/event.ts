@@ -50,6 +50,10 @@ const query = <const Definitions extends ReadonlyArray<Definition>>(definitions:
       description:
         "Only send events of these types, plus the initial server.connected event. When omitted, all events are sent.",
     }),
+    review: Schema.optional(Schema.Literals(["true"])).annotate({
+      description:
+        "Declare this subscription as a reviewer: registers reviewer presence for guarded permission review and returns a single-use-per-connection reviewer token in the initial server.connected event. Guarded permission requests can only be approved by a connection holding a live reviewer token.",
+    }),
   }).annotate({ identifier: "EventSubscribeQuery" })
 
 const make = <const Definitions extends ReadonlyArray<Definition>>(definitions: Definitions) => {
