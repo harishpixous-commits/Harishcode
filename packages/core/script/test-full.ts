@@ -132,7 +132,22 @@ const environment = {
   ...(process.platform === "win32" ? { USERPROFILE: home, TMP: temporary, TEMP: temporary } : {}),
 }
 
-const child = Bun.spawn({
+const countOnly = process.argv.includes("--count-only")
+const fixtureIndex = process.argv.indexOf("--fixture")
+const fixturePath = fixtureIndex === -1 ? undefined : process.argv[fixtureIndex + 1]
+
+const run = async (): Promise<{ code: number; output: string }> => {
+  if (fixturePath !== undefined) {
+    if (!fixturePath) {
+      console.error("discovery parity FAILED: --fixture requires a path to saved bun test output")
+      process.exit(1)
+    }
+    // Fixture mode exercises the gate against saved output (or a synthetic tampered copy)
+    // without spawning the suite; it never substitutes for a real full-suite result.
+    const output = await fs.readFile(fixturePath, "utf8")
+    return { code: 0, output }
+  }
+  const child = Bun.spawn({
   cmd: [process.execPath, "test", "--timeout=30000"],
   // The inventory is rooted at this package; the spawned suite must run from the same root or
   // the two sides of the comparison measure different trees.
@@ -155,13 +170,20 @@ process.off("SIGINT", interrupt)
 process.off("SIGTERM", terminate)
 process.stdout.write(out)
 process.stderr.write(err)
+return { code, output: `${out}\n${err}` }
+}
 
-const output = `${out}\n${err}`
+const { code, output } = await run()
 const collected = [...output.matchAll(/^(.+\.test\.ts):$/gm)].map((match) => normalize(match[1]!))
 if (collected.length === 0) {
   const summary = output.match(/Ran \d+ tests? across (\d+) files?/)
-  if (!summary) {
-    console.error("discovery parity FAILED: neither per-file headers nor the bun summary were found in suite output")
+  // Identity is the default gate: without per-file headers there is nothing to compare, so
+  // count agreement alone is never a silent pass. Count-scope requires the explicit
+  // --count-only opt-in and is printed as weaker evidence when used.
+  if (!summary || !countOnly) {
+    console.error(
+      `discovery parity FAILED: no per-file headers in suite output${summary ? "" : " or bun summary"}; identity gate cannot run (pass --count-only to explicitly accept count-scope evidence)`,
+    )
     process.exit(1)
   }
   const fallback = countError(discovered.length, Number(summary[1]))
@@ -170,7 +192,7 @@ if (collected.length === 0) {
     process.exit(1)
   }
   console.warn(
-    `discovery parity COUNT-SCOPE ONLY: bun printed no per-file headers, so identity is unverified (${summary[1]} collected = ${discovered.length} inventoried)`,
+    `discovery parity COUNT-SCOPE ONLY (--count-only): identity unverified (${summary[1]} collected = ${discovered.length} inventoried)`,
   )
   process.exitCode = code
 } else {
