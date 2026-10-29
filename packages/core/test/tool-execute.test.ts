@@ -1,5 +1,13 @@
 import { expect, test } from "bun:test"
 import { CodeModeTool } from "@harishcode/core/codemode/tool"
+import type { CodeModeWeb } from "@harishcode/core/codemode/web"
+import { AppNodeBuilder } from "@harishcode/core/effect/app-node-builder"
+import { Image } from "@harishcode/core/image"
+import { Permission } from "@harishcode/core/permission"
+import type { Context as ToolContext } from "@harishcode/schema/tool"
+import { imagePassthrough } from "./lib/image"
+import { permissionLayer } from "./lib/permission"
+import { executeTool as registryExecute, toolIdentity } from "./lib/tool"
 import { Tool } from "@harishcode/core/tool"
 import { execute } from "@harishcode/core/tool/runtime"
 import { Agent } from "@harishcode/schema/agent"
@@ -209,4 +217,151 @@ test("executions share the prepared runtime of an inventory while keeping per-ca
     createCodeMode(new Map(inventory.tools)).execute({ code: 'return await tools.echo({ value: "next" })' }, context),
   )
   expect(conversions).toBe(2)
+})
+
+const withGuard = (guard: (execution: ToolContext) => CodeModeWeb.GuardService) =>
+  CodeModeTool.create({ tools: new Map() }, (_, tool, input, context) => execute(tool, input, context), guard)
+
+const stubNetwork = (handler: (url: string, calls: string[]) => Response) => {
+  const calls: string[] = []
+  const original = globalThis.fetch
+  globalThis.fetch = (async (input: unknown) => {
+    const url = String(input)
+    calls.push(url)
+    return handler(url, calls)
+  }) as typeof fetch
+  return { calls, restore: () => void (globalThis.fetch = original) }
+}
+
+test("CodeMode fetch requires guard approval before any network request", async () => {
+  const asked: Array<{ url: string; method: string }> = []
+  let guardContext: unknown
+  const net = stubNetwork(() => new Response("should not reach the network"))
+  try {
+    const result = await Effect.runPromise(
+      withGuard((execution) => {
+        guardContext = execution
+        return {
+          approve: (url, method) => {
+            asked.push({ url, method })
+            return Effect.fail(new Error("Permission denied"))
+          },
+          check: () => Effect.void,
+        }
+      }).execute({ code: 'return await fetch("https://example.com/data")' }, context),
+    )
+    expect(result.output.error).toBe(true)
+    expect(result.output.output).toContain("Permission denied")
+    expect(net.calls).toEqual([])
+    expect(asked).toEqual([{ url: "https://example.com/data", method: "GET" }])
+    expect(guardContext).toMatchObject({ sessionID: context.sessionID, messageID: context.messageID, id: context.id })
+  } finally {
+    net.restore()
+  }
+})
+
+test("approved CodeMode fetch follows redirects only after checking each target", async () => {
+  const checked: string[] = []
+  const net = stubNetwork((url, calls) =>
+    calls.length === 1
+      ? new Response(null, { status: 302, headers: { location: "/next" } })
+      : new Response("final body", { status: 200, headers: { "content-type": "text/plain" } }),
+  )
+  try {
+    const result = await Effect.runPromise(
+      withGuard(() => ({
+        approve: () => Effect.void,
+        check: (url) => {
+          checked.push(url)
+          return Effect.void
+        },
+      })).execute({ code: 'const res = await fetch("https://example.com/start"); return await res.text()' }, context),
+    )
+    expect(result.output.error).toBeUndefined()
+    expect(result.output.output).toBe("final body")
+    expect(net.calls).toEqual(["https://example.com/start", "https://example.com/next"])
+    expect(checked).toEqual(["https://example.com/next"])
+  } finally {
+    net.restore()
+  }
+})
+
+test("CodeMode fetch stops before a denied redirect target", async () => {
+  const net = stubNetwork(() => new Response(null, { status: 302, headers: { location: "https://denied.example/x" } }))
+  try {
+    const result = await Effect.runPromise(
+      withGuard(() => ({
+        approve: () => Effect.void,
+        check: () => Effect.fail(new Error("Permission denied")),
+      })).execute({ code: 'return await fetch("https://example.com/start")' }, context),
+    )
+    expect(result.output.error).toBe(true)
+    expect(net.calls).toEqual(["https://example.com/start"])
+  } finally {
+    net.restore()
+  }
+})
+
+test("CodeMode fetch fails closed when no permission guard is provided", async () => {
+  const net = stubNetwork(() => new Response("should not reach the network"))
+  try {
+    const result = await Effect.runPromise(
+      createCodeMode(new Map()).execute({ code: 'return await fetch("https://example.com/data")' }, context),
+    )
+    expect(result.output.error).toBe(true)
+    expect(result.output.output).toContain("no permission guard")
+    expect(net.calls).toEqual([])
+  } finally {
+    net.restore()
+  }
+})
+
+test("registry mediates CodeMode fetch through the webfetch permission action", async () => {
+  const asked: Permission.AssertInput[] = []
+  const urls: string[] = []
+  const original = globalThis.fetch
+  globalThis.fetch = (async (input: unknown) => {
+    urls.push(String(input))
+    return new Response("should not reach the network")
+  }) as typeof fetch
+  try {
+    const layer = AppNodeBuilder.build(Tool.node, [
+      Image.node.replace(imagePassthrough),
+      Permission.node.replace(
+        permissionLayer({
+          assert: (input) => {
+            asked.push(input)
+            return Effect.fail(
+              new Permission.BlockedError({ rules: [], permission: input.action, resources: [...input.resources] }),
+            )
+          },
+        }),
+      ),
+    ])
+    const program = Effect.gen(function* () {
+      const tools = yield* Tool.Service
+      return yield* registryExecute(tools, {
+        sessionID: context.sessionID,
+        ...toolIdentity,
+        call: {
+          type: "tool-call",
+          id: context.id,
+          name: "execute",
+          input: { code: 'return await fetch("https://example.com/registry")' },
+        },
+      })
+    }).pipe(Effect.provide(layer), Effect.scoped)
+    const result = await Effect.runPromise(program)
+    expect(result).toMatchObject({ metadata: { error: true } })
+    expect(urls).toEqual([])
+    expect(asked[0]).toMatchObject({
+      action: "webfetch",
+      resources: ["https://example.com/registry"],
+      save: ["*"],
+      sessionID: context.sessionID,
+      source: { type: "tool", messageID: toolIdentity.messageID, id: context.id },
+    })
+  } finally {
+    globalThis.fetch = original
+  }
 })

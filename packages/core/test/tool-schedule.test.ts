@@ -23,7 +23,9 @@ const names = ["schedule_create", "schedule_list", "schedule_pause", "schedule_r
   (name) => `harishcode.${name}`,
 )
 
-const it = testEffect(AppNodeBuilder.build(Tool.node, [Image.node.replace(imagePassthrough)]))
+const it = testEffect(
+  AppNodeBuilder.build(Tool.node, [Image.node.replace(imagePassthrough), Permission.node.replace(permissionLayer())]),
+)
 
 /** An in-memory Schedule service. The real one is covered in schedule.test.ts; this exercises the tool layer. */
 const memory = () => {

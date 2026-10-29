@@ -77,9 +77,13 @@ const description = [
   "Await every call whose completion matters; pending calls are interrupted when execution ends. Run independent calls concurrently with `Promise.allSettled`.",
 ].join("\n")
 
+const unavailable = () =>
+  Effect.fail(new globalThis.Error("fetch is unavailable: no permission guard for this execution"))
+
 export const create = (
   inventory: Inventory,
   executeTool: (name: string, tool: Info, input: unknown, context: ToolContext) => Effect.Effect<Result, Error>,
+  guard?: (context: ToolContext) => CodeModeWeb.GuardService,
 ) => {
   return {
     name: "execute",
@@ -117,6 +121,11 @@ export const create = (
                 }),
               hooks: progressHooks(record),
             }),
+            // Model-written fetch goes through the per-execution guard; without one it fails closed.
+            Effect.provideService(
+              CodeModeWeb.Guard,
+              guard ? guard(context) : { approve: unavailable, check: unavailable },
+            ),
           )
         const toolCalls = yield* Ref.get(calls)
         const collected = (yield* Ref.get(files))
@@ -232,7 +241,7 @@ function renderCatalog(root: CatalogNode): ReadonlyArray<CodeModeCatalog.Tool | 
 
 // Inventories are immutable snapshots, so tool definitions, schemas, and the search index are built
 // once per inventory and shared by its catalog and every execution.
-const runtimes = new WeakMap<Inventory, CodeMode.Runtime<Run>>()
+const runtimes = new WeakMap<Inventory, CodeMode.Runtime<Run | CodeModeWeb.Guard>>()
 
 function runtime(inventory: Inventory) {
   const cached = runtimes.get(inventory)

@@ -2,13 +2,16 @@ import { describe, expect } from "bun:test"
 import { AppNodeBuilder } from "@harishcode/core/effect/app-node-builder"
 import { Location } from "@harishcode/core/location"
 import { AbsolutePath } from "@harishcode/core/schema"
+import { Permission } from "@harishcode/core/permission"
 import { Tool } from "@harishcode/core/tool"
+import { permissionLayer } from "./lib/permission"
 import { Effect, Schema } from "effect"
 import type { Info } from "@harishcode/schema/tool"
 import { it } from "./lib/effect"
 
 const toolNode = AppNodeBuilder.build(Tool.node, [
   Location.node.replace(Location.boundNode({ directory: AbsolutePath.make("/project") })),
+  Permission.node.replace(permissionLayer()),
 ])
 
 describe("CodeMode", () => {

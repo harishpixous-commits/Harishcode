@@ -10,6 +10,7 @@ import { Document, Info, type Entry } from "@harishcode/schema/config"
 import { ConfigExperimental } from "@harishcode/schema/config/experimental"
 import { testEffect } from "./lib/effect"
 import { imagePassthrough } from "./lib/image"
+import { Permission } from "@harishcode/core/permission"
 import { permissionLayer } from "./lib/permission"
 import { executeTool, registerToolPlugin, toolDefinitions, toolIdentity } from "./lib/tool"
 
@@ -22,7 +23,9 @@ const todos = [
   { content: "Rewrite everything", status: "cancelled" },
 ] as const
 
-const it = testEffect(AppNodeBuilder.build(Tool.node, [Image.node.replace(imagePassthrough)]))
+const it = testEffect(
+  AppNodeBuilder.build(Tool.node, [Image.node.replace(imagePassthrough), Permission.node.replace(permissionLayer())]),
+)
 
 const setup = (experimental: ConfigExperimental.Info | undefined) =>
   Effect.gen(function* () {
