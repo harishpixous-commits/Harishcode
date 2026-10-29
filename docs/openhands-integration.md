@@ -47,6 +47,45 @@ Offline tests cover origin restrictions, no credentials/body/redirect/cookies, m
 
 `approval.ts` adds a disabled adapter primitive with random one-use review IDs, session scoping, explicit allow-once/reject only, cancellation, deadline and connection-close rejection. A trusted client contract test carries these decisions through actual Harish Code ACP wire fixtures. This is not an authenticated UI transport: no external SDK reply is trusted, no review endpoint/UI has been built, and the primitive is not activated. Existing ACP wire tests use a local fake Harish Code server and test permission selection and session/model behavior. These are component tests, not a complete OpenHands workflow.
 
+## Canvas connection profile (verified 2026-10-29)
+
+Launch Harish Code as the ACP agent for Canvas with the guarded review profile. Keep the argv
+as an array on each backend host; resolve the intended executable locally, never a shell string
+or an auto-downloaded binary:
+
+```json
+["harishcode", "acp", "--permission-review", "harishcode", "--review-workspace", "/absolute/bound/workspace", "--review-timeout", "60000"]
+```
+
+Launch properties below are source-traced at commit 706d114, not runtime-verified security
+results; the composed fake-model workflow test remains pending.
+
+- The ACP process spawns its server as `serve --stdio --port 0`. In stdio mode the saved
+  service configuration file is not read, so `config.hostname` cannot apply and the bind
+  address is always `127.0.0.1` (server-process.ts reads the config only in service mode).
+  Service mode is a separate, explicitly configured daemon path where a saved
+  `service.json` hostname such as `0.0.0.0` would LAN-bind; it is not part of this profile
+  and still requires the server credential.
+- The per-process server credential is a random 32-byte value passed as child-only environment;
+  an inherited `HARISHCODE_PASSWORD` cannot shadow it, and the server fails closed without one.
+- Every HTTP route requires the credential except ticketed PTY/MCP connects and pairing links,
+  which validate their own one-time ticket or code.
+- Checked log paths: the only URL-logging middleware is Effect's `HttpMiddleware.logger`
+  (used for status >= 400 responses), which strips query and hash before logging; schema-error
+  logs carry route patterns (`METHOD /path/:param`), never request URLs. A schema-rejection
+  reason can echo a malformed (never successfully decoded) query value, which cannot be a
+  valid credential. Other server/ACP log sites are operational (session IDs, RPC method
+  names, causes). No universal never-logs-tokens property is claimed beyond these traced paths.
+- The server's stdin pipe is the ownership lease: the server exits when the launcher dies.
+- Guarded permission asks never reach the ACP client. With no reviewer connected the server
+  rejects them immediately; with a reviewer present they settle on the reviewer's reply or
+  reject after `--review-timeout`. A reviewer disconnect rejects pending guarded asks.
+  Residual: a guarded prompt with no reviewer connected spends model tokens until the first
+  permission ask rejects. A prompt-start presence preflight would need a new presence-query
+  endpoint; no existing API exposes reviewer count, and the bounded spend is accepted for now.
+- The reviewer subscription is transport binding only, not an authenticated reviewer identity;
+  pairing-scoped reviewer identity remains follow-up work.
+
 ## Full workflow acceptance still required
 
 - The inactive HC-owned review context now avoids sending permission requests to the external ACP client, waits for a shared HC server decision, rejects after a deadline and on cancellation. Foreign-session settlement/replay is regression-tested. A disabled-by-default guarded launch profile now exposes this route: `harishcode acp --permission-review harishcode --review-workspace PATH [--review-timeout MS]` (owner process-launch configuration only, never ACP request metadata), with launch-composition tests driving the wire from the actual profile resolver. New guarded session creation, load/resume/fork and pre-prompt checks require an owner-bound workspace and guarded marker; extra MCP roots are refused. These are application checks, not filesystem containment. It does not force normally autoallowed operations to ask or establish an authenticated reviewing UI.
