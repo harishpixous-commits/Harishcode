@@ -1,13 +1,13 @@
 import { For, splitProps, type ComponentProps } from "solid-js"
 import { syncSpinPhase } from "../hooks/spin-phase"
-import { radarDots, radarKeyframes, radarLoop } from "./spinner-radar"
+import { harishKeyframes, harishLoop, harishStrokes } from "./spinner-harish"
 
-// Every AI activity spinner (busy session tabs, the activity chip, subagents, tool cards) shows Soft Radar. Non-AI
-// loading uses Loader.
+// Every AI activity spinner (busy session tabs, the activity chip, subagents, tool cards) shows Harish Pulse, the HC
+// monogram lit stroke by stroke. Non-AI loading uses Loader.
 
-const keyframes = "spinner-radar"
+const keyframes = "spinner-harish"
 
-const dots = radarDots()
+const strokes = harishStrokes()
 
 // The keyframes are added to the document once, the first time a spinner renders.
 let added = false
@@ -18,7 +18,7 @@ export function Spinner(props: ComponentProps<"svg"> & { "data-component"?: stri
   if (!added) {
     added = true
     const style = document.createElement("style")
-    style.textContent = radarKeyframes(keyframes)
+    style.textContent = harishKeyframes(keyframes)
     document.head.append(style)
   }
 
@@ -32,23 +32,23 @@ export function Spinner(props: ComponentProps<"svg"> & { "data-component"?: stri
       classList={{ ...local.classList, [local.class ?? ""]: !!local.class }}
       fill="currentColor"
     >
-      <For each={dots}>
-        {(dot) => (
-          <rect
-            x={dot.x}
-            y={dot.y}
-            width={dot.size}
-            height={dot.size}
-            rx={dot.size * 0.24}
-            style={{
-              "--still": dot.still,
-              animation: dot.steady
-                ? undefined
-                : `${keyframes}-${dot.shape} calc(${radarLoop}s * var(--spinner-time, 1)) linear calc(${-radarLoop * (1 - dot.at)}s * var(--spinner-time, 1)) infinite`,
-            }}
-          />
-        )}
-      </For>
+      {/* The 24-unit mark, scaled and centred in the 16-unit box. */}
+      <g transform="translate(-0.667 0) scale(0.6667)">
+        <For each={strokes}>
+          {(stroke) => (
+            <rect
+              x={stroke.x}
+              y={stroke.y}
+              width={stroke.w}
+              height={stroke.h}
+              style={{
+                "--still": stroke.still,
+                animation: `${keyframes} calc(${harishLoop}s * var(--spinner-time, 1)) linear calc(${-harishLoop * stroke.at}s * var(--spinner-time, 1)) infinite`,
+              }}
+            />
+          )}
+        </For>
+      </g>
     </svg>
   )
 }
