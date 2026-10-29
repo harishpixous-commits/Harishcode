@@ -85,3 +85,15 @@ This is a source inventory across every top-level package/service group, not beh
 - https://raw.githubusercontent.com/anomalyco/opencode/dev/LICENSE
 - https://registry.npmjs.org/%40opencode-ai%2Fpty/0.3.1
 - https://github.com/anomalyco/ghostty-web/commit/e91e38a9ceb13c566ddfa15185a9393849f712a9
+
+
+## Qualified upstream deltas, 2026-10-29 16:09 IST
+
+Inspected actual fetched commit patches, not just commit headlines. These are backlog qualifications, not imported features:
+
+- OpenCode `66f1fa816d583fdfa0f52eff1c7d56c8458b1c4e` upgrades Effect 4.0.1 to 4.0.6. It changes SQL adapter methods, filesystem utility shape, tool runtime and CodeMode schemas, API generation and generated protocol output across 13 files. Harish Code remains pinned to 4.0.1. Do not update the version alone or overwrite generated clients. Qualify this as a separate dependency/API migration with schema generation and behavior checks, after the current guarded integration slice.
+- OpenCode `7d0f79d2ca32f3fad57a7ec602951858a46adbab` adds an opt-in switch for a redesigned question UI and retains a classic implementation. Harish Code already has a question dock and motion controls. The new upstream change is the opt-in/classic split and settings wiring, not the invention of questions or docks. No equivalent `newQuestionUI` setting was found in Harish Code source. Changes span 22 files, including component tests/styles/settings. A user-facing new toggle needs the existing feature approval process; not automatically imported.
+- OpenHands `4fd9bb0cfb6617849a07c7001bacc3201f309748` aligns cloud file-list query invalidation with the local prefix and forwards an absolute outside-root path unchanged when opening cloud file content. React query hooks are not shared with Harish Code's Solid application. The invalidation pattern is worth retaining for future adapter tests; the outside-root path behavior must not widen Harish Code's allowed workspace.
+- OpenHands `cb0f7ddfb2bfcbb6fbd49043c24cfa4340d703e5` delays an optimistic message's send watchdog while a provisional `task-*` cloud conversation is provisioning, starting it when reassigned to the real conversation ID. It does not change agent approval or local ACP behavior. Retain pending-message lifecycle tests for a later cloud adapter, not an unrelated current port.
+
+Sources: https://github.com/anomalyco/opencode/commits/dev and https://github.com/OpenHands/OpenHands/commits/main . Immutable full SHAs above were available in the fetched repositories. This qualification does not supersede the earlier pinned integration analysis and does not start any cloud service or provider call.

@@ -1,9 +1,10 @@
 import { describe, expect } from "bun:test"
-import { DateTime, Effect, Layer, Stream } from "effect"
+import { DateTime, Deferred, Effect, Fiber, Layer, Stream } from "effect"
 import { AppNodeBuilder } from "@harishcode/core/effect/app-node-builder"
 import { Config } from "@harishcode/core/config"
 import { Image } from "@harishcode/core/image"
 import { Schedule } from "@harishcode/core/schedule"
+import { Permission } from "@harishcode/core/permission"
 import { Session } from "@harishcode/core/session"
 import { Tool } from "@harishcode/core/tool"
 import { ScheduleTools } from "@harishcode/core/tool/plugin/schedule"
@@ -70,7 +71,10 @@ const memory = () => {
   return { rows, flag, service }
 }
 
-const setup = (experimental: ConfigExperimental.Info | undefined) =>
+const setup = (
+  experimental: ConfigExperimental.Info | undefined,
+  assert: Permission.Interface["assert"] = () => Effect.void,
+) =>
   Effect.gen(function* () {
     const schedules = memory()
     const commands: CommandDefinition[] = []
@@ -90,7 +94,7 @@ const setup = (experimental: ConfigExperimental.Info | undefined) =>
     }).pipe(
       Effect.provide(Layer.mock(Config.Service)({ entries: () => Effect.succeed([document(experimental)]) })),
       Effect.provide(Layer.succeed(Schedule.Service, schedules.service)),
-      Effect.provide(permissionLayer({ assert: () => Effect.void })),
+      Effect.provide(permissionLayer({ assert })),
     )
     return { registry: yield* Tool.Service, rows: schedules.rows, flag: schedules.flag, commands, prompts }
   })
@@ -266,3 +270,85 @@ describe("ScheduleTools", () => {
 function document(experimental: ConfigExperimental.Info | undefined): Entry {
   return new Document({ type: "document", info: new Info(experimental ? { experimental } : {}) })
 }
+
+it.effect("schedule mutations require leaf approval through direct and CodeMode execution before any change", () =>
+  Effect.gen(function* () {
+    const asked: Permission.AssertInput[] = []
+    let deny = false
+    const { registry, rows } = yield* setup(new ConfigExperimental.Info({ schedules: true }), (input) => {
+      asked.push(input)
+      return deny
+        ? Effect.fail(
+            new Permission.BlockedError({ rules: [], permission: input.action, resources: [...input.resources] }),
+          )
+        : Effect.void
+    })
+    deny = true
+    expect(yield* call(registry, "schedule_create", { when: { in: "5 minutes" }, prompt: "fixture" })).toMatchObject({
+      metadata: { error: true },
+    })
+    expect(rows.size).toBe(0)
+    expect(asked[0]).toMatchObject({ action: "harishcode_schedule_create", resources: [sessionID], sessionID })
+    deny = false
+    yield* run(registry, "schedule_create", { when: { in: "5 minutes" }, prompt: "fixture" })
+    deny = true
+    for (const name of ["schedule_pause", "schedule_resume", "schedule_delete"]) {
+      expect(yield* call(registry, name, { id: "sch_1" })).toMatchObject({ metadata: { error: true } })
+      expect(rows.get(Schedule.ID.make("sch_1"))?.status).toBe("active")
+      expect(asked.at(-1)).toMatchObject({
+        action: `harishcode_${name}`,
+        resources: ["sch_1"],
+        source: { type: "tool" },
+      })
+    }
+    const directTools = yield* registry.snapshot([{ action: "execute", resource: "*", effect: "deny" }])
+    expect(
+      yield* directTools
+        .execute({
+          sessionID,
+          ...toolIdentity,
+          call: {
+            type: "tool-call",
+            id: "call_denied_direct",
+            name: "harishcode_schedule_delete",
+            input: { id: "sch_1" },
+          },
+        })
+        .pipe(Effect.flip),
+    ).toMatchObject({ _tag: "Tool.Error", message: expect.stringContaining("Permission denied") })
+    expect(rows.size).toBe(1)
+  }),
+)
+
+it.effect("pending schedule approval does not create a schedule until user decision completes", () =>
+  Effect.gen(function* () {
+    const asked = yield* Deferred.make<void>()
+    const decision = yield* Deferred.make<void>()
+    const { registry, rows } = yield* setup(new ConfigExperimental.Info({ schedules: true }), () =>
+      Deferred.succeed(asked, undefined).pipe(Effect.andThen(Deferred.await(decision))),
+    )
+    const pending = yield* call(registry, "schedule_create", { when: { in: "5 minutes" }, prompt: "fixture" }).pipe(
+      Effect.forkScoped,
+    )
+    yield* Deferred.await(asked)
+    expect(rows.size).toBe(0)
+    yield* Deferred.succeed(decision, undefined)
+    yield* Fiber.join(pending)
+    expect(rows.size).toBe(1)
+  }),
+)
+
+it.effect("cancelled schedule review leaves no future work behind", () =>
+  Effect.gen(function* () {
+    const asked = yield* Deferred.make<void>()
+    const { registry, rows } = yield* setup(new ConfigExperimental.Info({ schedules: true }), () =>
+      Deferred.succeed(asked, undefined).pipe(Effect.andThen(Effect.never)),
+    )
+    const pending = yield* call(registry, "schedule_create", { when: { in: "5 minutes" }, prompt: "fixture" }).pipe(
+      Effect.forkScoped,
+    )
+    yield* Deferred.await(asked)
+    yield* Fiber.interrupt(pending)
+    expect(rows.size).toBe(0)
+  }),
+)

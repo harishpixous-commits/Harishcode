@@ -6,6 +6,7 @@ import type { SessionHooks } from "@harishcode/plugin/effect/session"
 import { Model } from "@harishcode/schema/model"
 import { AbsolutePath } from "@harishcode/schema/schema"
 import { Session } from "@harishcode/schema/session"
+import type { Tool } from "@harishcode/schema/tool"
 import { Effect, Schema } from "effect"
 import { FileAccess } from "../../file-access.js"
 import { Git } from "../../git.js"
@@ -96,6 +97,18 @@ export const Plugin = {
   effect: Effect.fn("HarishCodeTools.Plugin")(function* (ctx: Context) {
     const access = yield* FileAccess.Service
     const permission = yield* Permission.Service
+    const approve = (action: string, resource: string, input: unknown, context: Tool.Context) =>
+      permission
+        .assert({
+          action,
+          resources: [resource],
+          metadata: { input },
+          sessionID: context.sessionID,
+          agent: context.agent,
+          source: { type: "tool", messageID: context.messageID, id: context.id },
+        })
+        .pipe(Effect.mapError((error) => new ToolFailure({ message: error.message, error })))
+
     const hook = (event: SessionHooks["context"]) =>
       Effect.sync(() => {
         event.system.push(
@@ -125,7 +138,8 @@ export const Plugin = {
             const sessionID = input.sessionID ?? context.sessionID
             const title = input.title.trim()
             if (!title) return Effect.fail(new ToolFailure({ message: "Session title must not be empty" }))
-            return ctx.session.update({ sessionID, title }).pipe(
+            return approve("harishcode_session_rename", sessionID, { title }, context).pipe(
+              Effect.andThen(ctx.session.update({ sessionID, title })),
               Effect.as({
                 output: { sessionID, title },
                 content: `Renamed session ${sessionID} to ${title}.`,
@@ -144,6 +158,7 @@ export const Plugin = {
           execute: (input, context) =>
             Effect.gen(function* () {
               const sessionID = input.sessionID ?? context.sessionID
+              yield* approve("harishcode_session_move", sessionID, input, context)
               yield* ctx.session.move({
                 sessionID,
                 directory: input.directory,
@@ -165,8 +180,9 @@ export const Plugin = {
           input: WorktreeCreateInput,
           output: Worktree.Info,
           options: { namespace: "harishcode", codemode: true, pinned: true },
-          execute: (input) =>
-            ctx.worktree.create({ projectID: ctx.location.project.id, name: input.name }).pipe(
+          execute: (input, context) =>
+            approve("harishcode_worktree_create", input.name, input, context).pipe(
+              Effect.andThen(ctx.worktree.create({ projectID: ctx.location.project.id, name: input.name })),
               Effect.map((output) => ({ output, content: `Created worktree in ${output.directory}.` })),
               Effect.mapError(
                 (error) => new ToolFailure({ message: `Unable to create worktree ${input.name}`, error }),

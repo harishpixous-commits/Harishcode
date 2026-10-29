@@ -9,6 +9,8 @@ import { Config } from "../../config.js"
 import { ConfigEntryObserver } from "../../config/plugin/entry-observer.js"
 import PROMPT_SCHEDULE from "../../plugin/command/schedule.txt"
 import { Schedule } from "../../schedule.js"
+import { Permission } from "../../permission.js"
+import type { Tool } from "@harishcode/schema/tool"
 
 /** A schedule as the model reads it, with times in the schedule's own zone. */
 export const View = Schema.Struct({
@@ -43,6 +45,7 @@ export const Plugin = {
   effect: Effect.fn("ScheduleTools.Plugin")(function* (ctx: Context) {
     const config = yield* Config.Service
     const schedules = yield* Schedule.Service
+    const permission = yield* Permission.Service
     // Internal plugins are not re-run on config changes, so reload the tools and the command instead.
     const loaded = yield* ConfigEntryObserver.observe(
       config,
@@ -66,6 +69,17 @@ export const Plugin = {
         ),
       )
     const failure = (error: { readonly message: string }) => new ToolFailure({ message: error.message, error })
+    const approve = (name: string, input: unknown, context: Tool.Context, resource: string) =>
+      permission
+        .assert({
+          action: `harishcode_${name}`,
+          resources: [resource],
+          metadata: { input },
+          sessionID: context.sessionID,
+          agent: context.agent,
+          source: { type: "tool", messageID: context.messageID, id: context.id },
+        })
+        .pipe(Effect.mapError(failure))
 
     yield* ctx.tool
       .transform((editor) => {
@@ -78,7 +92,9 @@ export const Plugin = {
           output: View,
           options: { namespace: "harishcode", codemode: true },
           execute: (input, context) =>
-            schedules.create(Schedule.toCreateInput(context.sessionID, input)).pipe(
+            allowed(context.sessionID).pipe(
+              Effect.andThen(approve("schedule_create", input, context, context.sessionID)),
+              Effect.andThen(schedules.create(Schedule.toCreateInput(context.sessionID, input))),
               Effect.map((info) => {
                 const view = toView(info)
                 return { output: view, content: `Scheduled: ${summary(view)}` }
@@ -111,6 +127,7 @@ export const Plugin = {
           options: { namespace: "harishcode", codemode: true },
           execute: (input, context) =>
             owned(input.id, context.sessionID).pipe(
+              Effect.andThen(approve("schedule_pause", input, context, input.id)),
               Effect.andThen(schedules.pause(input.id)),
               Effect.map((info) => ({ output: toView(info), content: `Paused: ${summary(toView(info))}` })),
               Effect.mapError(failure),
@@ -125,6 +142,7 @@ export const Plugin = {
           options: { namespace: "harishcode", codemode: true },
           execute: (input, context) =>
             owned(input.id, context.sessionID).pipe(
+              Effect.andThen(approve("schedule_resume", input, context, input.id)),
               Effect.andThen(schedules.resume(input.id)),
               Effect.map((info) => ({ output: toView(info), content: `Resumed: ${summary(toView(info))}` })),
               Effect.mapError(failure),
@@ -138,6 +156,7 @@ export const Plugin = {
           options: { namespace: "harishcode", codemode: true },
           execute: (input, context) =>
             owned(input.id, context.sessionID).pipe(
+              Effect.andThen(approve("schedule_delete", input, context, input.id)),
               Effect.andThen(schedules.remove(input.id)),
               Effect.as({ output: { id: input.id, removed: true }, content: `Deleted schedule ${input.id}.` }),
               Effect.mapError(failure),

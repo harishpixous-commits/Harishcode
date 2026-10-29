@@ -144,14 +144,14 @@ it.effect("groups available models by provider with paging", () =>
   }),
 )
 
-const approvals = { assertions: [] as Permission.AssertInput[], denyEdit: false }
+const approvals = { assertions: [] as Permission.AssertInput[], denyEdit: false, denyAction: "" }
 const worktreeIt = testEffect(
   makePluginTestLayer(
     permissionLayer({
       assert: (input) =>
         Effect.sync(() => approvals.assertions.push(input)).pipe(
           Effect.andThen(
-            approvals.denyEdit && input.action === "edit"
+            (approvals.denyEdit && input.action === "edit") || approvals.denyAction === input.action
               ? Effect.fail(
                   new Permission.BlockedError({ rules: [], permission: input.action, resources: input.resources }),
                 )
@@ -255,4 +255,55 @@ worktreeIt.live("creates, lists, and removes worktrees for the plugin's project"
     ])
     expect((yield* run("worktree_list", {})).worktrees).not.toContainEqual({ directory, strategy: "git" })
   }),
+)
+
+worktreeIt.live("session management mutations stop before host effects when leaf permission is denied", () =>
+  Effect.gen(function* () {
+    const plugins = yield* Plugin.Service
+    const sessions = yield* Session.Service
+    const location = yield* Location.Service
+    const host = yield* PluginHost.make(plugins)
+    yield* HarishCodeTools.Plugin.effect(host)
+    const session = yield* sessions.create({
+      location: Location.Ref.make({ directory: location.directory }),
+      title: "unchanged",
+    })
+    const registry = yield* Tool.Service
+    const call = (name: string, input: unknown) =>
+      executeTool(registry, {
+        sessionID: session.id,
+        ...toolIdentity,
+        call: {
+          type: "tool-call",
+          id: `call-denied-${name}`,
+          name: "execute",
+          input: { code: `return await tools.harishcode.${name}(${JSON.stringify(input)})` },
+        },
+      })
+    approvals.assertions.length = 0
+    for (const [name, input] of [
+      ["session_rename", { title: "changed" }],
+      ["session_move", { directory: "/not-authorized-fixture" }],
+      ["worktree_create", { name: "denied-fixture" }],
+    ] as const) {
+      approvals.denyAction = `harishcode_${name}`
+      expect(yield* call(name, input)).toMatchObject({ metadata: { error: true } })
+      expect(approvals.assertions.at(-1)).toMatchObject({
+        action: approvals.denyAction,
+        sessionID: session.id,
+        source: { type: "tool" },
+      })
+    }
+    approvals.denyAction = ""
+    expect(yield* sessions.get(session.id)).toMatchObject({
+      title: "unchanged",
+      location: { directory: location.directory },
+    })
+  }).pipe(
+    Effect.ensuring(
+      Effect.sync(() => {
+        approvals.denyAction = ""
+      }),
+    ),
+  ),
 )
