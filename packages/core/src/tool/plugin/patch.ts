@@ -63,6 +63,7 @@ type Prepared =
       readonly before: string
       readonly after: string
       readonly moveTarget?: FileAccess.Target
+      readonly moveBefore?: string
     })
 
 export const Plugin = {
@@ -118,8 +119,11 @@ export const Plugin = {
               // First on-disk state per target the approval preview was prepared from: raw
               // bytes, or null when the path did not exist. Revalidated after approval. Raw bytes
               // because decoded text collapses invalid UTF-8 to U+FFFD and repeated BOMs to one
-              // flag, so a text comparison is not byte-exact; binary and non-UTF-8 targets fail
-              // closed on any byte change while matching and preview keep the decoded-text view.
+              // flag, so a text comparison is not byte-exact. A target whose bytes changed fails
+              // closed; an unchanged non-UTF-8 target still commits through the decoded-text view,
+              // which re-encodes undecodable bytes as U+FFFD - pre-existing lossy text-tool
+              // behavior this precondition does not change. Matching and preview keep the
+              // decoded-text view.
               const diskBase = new Map<string, { readonly resource: string; readonly base: Uint8Array | null }>()
               const resolveTarget = Effect.fnUntraced(function* (value: string) {
                 const target = yield* access.resolve({ path: value, kind: "file" })
@@ -239,18 +243,33 @@ export const Plugin = {
                   })
                   const move = hunk.movePath ? yield* resolveTarget(hunk.movePath) : undefined
                   const moveTarget = move && move.absolute !== target.absolute ? move : undefined
-                  if (moveTarget && !diskBase.has(moveTarget.absolute)) {
-                    const destination = yield* environment.files.read(moveTarget.absolute).pipe(
-                      Effect.map((result) => result.bytes as Uint8Array | undefined),
-                      Effect.catchTags({
-                        "Environment.NotFound": () => Effect.succeed(undefined),
-                        "Environment.WrongKind": () => Effect.succeed(undefined),
-                      }),
-                    )
-                    diskBase.set(moveTarget.absolute, {
-                      resource: moveTarget.resource,
-                      base: destination ?? null,
-                    })
+                  // A move onto an occupied destination destroys its content; show what is
+                  // discarded in the approval preview instead of presenting the move as free.
+                  // The discarded content is the earlier hunk's virtual result when this patch
+                  // already touched the destination, otherwise the disk bytes.
+                  let moveBefore: string | undefined
+                  if (moveTarget) {
+                    const previous = updates.get(moveTarget.absolute)
+                    if (previous === null) {
+                      moveBefore = undefined
+                    } else if (previous !== undefined) {
+                      moveBefore = Bom.split(previous).text
+                    } else {
+                      const destination = yield* environment.files.read(moveTarget.absolute).pipe(
+                        Effect.map((result) => result.bytes as Uint8Array | undefined),
+                        Effect.catchTags({
+                          "Environment.NotFound": () => Effect.succeed(undefined),
+                          "Environment.WrongKind": () => Effect.succeed(undefined),
+                        }),
+                      )
+                      if (!diskBase.has(moveTarget.absolute)) {
+                        diskBase.set(moveTarget.absolute, {
+                          resource: moveTarget.resource,
+                          base: destination ?? null,
+                        })
+                      }
+                      moveBefore = destination ? Bom.decodeBytes(destination).text : undefined
+                    }
                   }
                   const next = Patch.joinBom(update.content, update.bom)
                   prepared.push({
@@ -260,6 +279,7 @@ export const Plugin = {
                     before,
                     after: update.content,
                     moveTarget,
+                    moveBefore,
                   })
                   if (moveTarget) {
                     updates.set(target.absolute, null)
@@ -276,7 +296,21 @@ export const Plugin = {
                 )
               }
 
-              const patchFiles = prepared.map((change) => patchFile(change))
+              const patchFiles = prepared.flatMap((change) => {
+                const files = [patchFile(change)]
+                if (change.type === "update" && change.moveTarget && change.moveBefore !== undefined) {
+                  files.push(
+                    patchFile({
+                      type: "delete",
+                      path: change.moveTarget.resource,
+                      target: change.moveTarget,
+                      before: change.moveBefore,
+                      after: "",
+                    }),
+                  )
+                }
+                return files
+              })
               const targets = prepared.flatMap((change) => [
                 change.target,
                 ...(change.type === "update" && change.moveTarget ? [change.moveTarget] : []),
@@ -392,10 +426,22 @@ export const Plugin = {
                   }),
                 { discard: true },
               )
-              const files = prepared.map((change) => {
-                if (change.type === "delete") return patchFile(change)
+              const files = prepared.flatMap((change) => {
+                if (change.type === "delete") return [patchFile(change)]
                 const target = change.type === "update" && change.moveTarget ? change.moveTarget : change.target
-                return patchFile(change, formatted.get(target.absolute))
+                const entries = [patchFile(change, formatted.get(target.absolute))]
+                if (change.type === "update" && change.moveTarget && change.moveBefore !== undefined) {
+                  entries.push(
+                    patchFile({
+                      type: "delete",
+                      path: change.moveTarget.resource,
+                      target: change.moveTarget,
+                      before: change.moveBefore,
+                      after: "",
+                    }),
+                  )
+                }
+                return entries
               })
               return { applied, files }
             }).pipe(

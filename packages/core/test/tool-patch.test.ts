@@ -1469,6 +1469,108 @@ describe("PatchTool", () => {
     ),
   )
 
+  // Rename preview: a move onto an occupied destination destroys its content, so the approval
+  // preview must show those bytes instead of presenting the move as free.
+  it.live("shows the content a move destroys on an existing destination", () =>
+    Effect.acquireUseRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => {
+        reset()
+        const source = path.join(tmp.path, "old.txt")
+        const destination = path.join(tmp.path, "dest.txt")
+        return Effect.promise(() => Promise.all([fs.writeFile(source, "before\n"), fs.writeFile(destination, "old-dest\n")])).pipe(
+          Effect.andThen(
+            withTool(tmp.path, (registry) =>
+              Effect.gen(function* () {
+                const result = yield* executeTool(
+                  registry,
+                  call(
+                    "*** Begin Patch\n*** Update File: old.txt\n*** Move to: dest.txt\n@@\n-before\n+after\n*** End Patch",
+                  ),
+                )
+                expect(result.status).toBe("completed")
+                const metadata = assertions[0]?.metadata as { files?: Array<{ file?: string; patch?: string }> } | undefined
+                const destroyed = metadata?.files?.find((file) => file.patch?.includes("-old-dest"))
+                expect(destroyed?.file).toBe("dest.txt")
+                expect(yield* Effect.promise(() => fs.readFile(destination, "utf8"))).toBe("after\n")
+                expect(yield* exists(source)).toBe(false)
+              }),
+            ),
+          ),
+        )
+      },
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ),
+  )
+
+  // Rename preview: when an earlier hunk updated the destination, the move destroys the virtual
+  // result (-newer), not the disk bytes (-old).
+  it.live("shows the virtual destination content a move destroys after an earlier update to it", () =>
+    Effect.acquireUseRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => {
+        reset()
+        const source = path.join(tmp.path, "old.txt")
+        const destination = path.join(tmp.path, "dest.txt")
+        return Effect.promise(() => Promise.all([fs.writeFile(source, "before\n"), fs.writeFile(destination, "old\n")])).pipe(
+          Effect.andThen(
+            withTool(tmp.path, (registry) =>
+              Effect.gen(function* () {
+                const result = yield* executeTool(
+                  registry,
+                  call(
+                    "*** Begin Patch\n*** Update File: dest.txt\n@@\n-old\n+newer\n*** Update File: old.txt\n*** Move to: dest.txt\n@@\n-before\n+after\n*** End Patch",
+                  ),
+                )
+                expect(result.status).toBe("completed")
+                const metadata = assertions[0]?.metadata as { files?: Array<{ patch?: string }> } | undefined
+                const destroyed = metadata?.files?.find((file) => file.patch?.includes("-newer"))
+                expect(destroyed).toBeDefined()
+                expect(metadata?.files?.some((file) => file.patch?.includes("-old\n"))).toBe(true)
+                expect(yield* Effect.promise(() => fs.readFile(destination, "utf8"))).toBe("after\n")
+                expect(yield* exists(source)).toBe(false)
+              }),
+            ),
+          ),
+        )
+      },
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ),
+  )
+
+  // Virtual sequence: an add recreating the source of an earlier move is a pure addition - the
+  // move already removed the original content from that path.
+  it.live("shows a pure addition when an add recreates the source of an earlier move", () =>
+    Effect.acquireUseRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => {
+        reset()
+        const source = path.join(tmp.path, "old.txt")
+        return Effect.promise(() => fs.writeFile(source, "before\n")).pipe(
+          Effect.andThen(
+            withTool(tmp.path, (registry) =>
+              Effect.gen(function* () {
+                const result = yield* executeTool(
+                  registry,
+                  call(
+                    "*** Begin Patch\n*** Update File: old.txt\n*** Move to: moved.txt\n@@\n-before\n+after\n*** Add File: old.txt\n+recreated\n*** End Patch",
+                  ),
+                )
+                expect(result.status).toBe("completed")
+                const metadata = assertions[0]?.metadata as { files?: Array<{ file?: string; patch?: string }> } | undefined
+                const add = metadata?.files?.find((file) => file.file === "old.txt" && file.patch?.includes("+recreated"))
+                expect(add?.patch).not.toContain("-before")
+                expect(yield* Effect.promise(() => fs.readFile(source, "utf8"))).toBe("recreated\n")
+                expect(yield* Effect.promise(() => fs.readFile(path.join(tmp.path, "moved.txt"), "utf8"))).toBe("after\n")
+              }),
+            ),
+          ),
+        )
+      },
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ),
+  )
+
   it.live("preserves a later commit defect after earlier sequential applications", () =>
     Effect.acquireUseRelease(
       Effect.promise(() => tmpdir()),

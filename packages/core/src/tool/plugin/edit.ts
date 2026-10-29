@@ -246,8 +246,9 @@ export const Plugin = {
 
               // The approved base is the file's raw bytes: decoded text collapses invalid UTF-8
               // to U+FFFD and repeated BOMs to one flag, so a text comparison is not byte-exact.
-              // Binary and non-UTF-8 files therefore fail closed on any byte change; matching and
-              // preview keep the decoded-text view.
+              // A target whose bytes changed fails closed. An unchanged non-UTF-8 target still
+              // commits through the decoded-text view, which re-encodes undecodable bytes as
+              // U+FFFD - pre-existing lossy text-tool behavior this precondition does not change.
               const originalBytes = (yield* environment.files.read(target.absolute).pipe(
                 Effect.catchTag("Environment.NotFound", () =>
                   Effect.fail(new ToolFailure({ message: `File not found: ${input.path}` })),
