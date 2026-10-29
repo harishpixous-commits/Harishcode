@@ -135,13 +135,15 @@ const environment = {
 const countOnly = process.argv.includes("--count-only")
 const fixtureIndex = process.argv.indexOf("--fixture")
 const fixturePath = fixtureIndex === -1 ? undefined : process.argv[fixtureIndex + 1]
+// A bare `--fixture` (no path, or another flag where the path belongs) must never fall
+// through to the real suite: reject before launch.
+if (fixtureIndex !== -1 && (!fixturePath || fixturePath.startsWith("--"))) {
+  console.error("discovery parity FAILED: --fixture requires a path to saved bun test output")
+  process.exit(1)
+}
 
 const run = async (): Promise<{ code: number; output: string }> => {
   if (fixturePath !== undefined) {
-    if (!fixturePath) {
-      console.error("discovery parity FAILED: --fixture requires a path to saved bun test output")
-      process.exit(1)
-    }
     // Fixture mode exercises the gate against saved output (or a synthetic tampered copy)
     // without spawning the suite; it never substitutes for a real full-suite result.
     const output = await fs.readFile(fixturePath, "utf8")
