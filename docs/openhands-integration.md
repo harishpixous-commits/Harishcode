@@ -150,3 +150,23 @@ A default-deny launch profile is not offered until the remaining caller paths, c
 A new real-registry/CodeMode regression failed against the prior implementation: a rejecting permission service was never consulted, and schedule creation succeeded. The repair adds leaf approval for create, pause, resume and delete without adding a generic registry authorization layer. Listing stays read-only. Exact caller session, schedule resource and tool source accompany each request. Enabled-state and ownership checks happen first, so foreign schedules are not exposed through an approval prompt.
 
 Focused tool tests: 10 pass, 48 assertions, including no mutation on denial, direct and CodeMode calls, pending review with no schedule until approval, and interrupted review leaving no future work. Source/test type checks remain clear. These tests use an in-memory schedule service and an injected permission service; no user schedule, model, timer process or provider was touched. This does not complete the guarded Canvas workflow or approve future scheduled model spend.
+
+## Offline real-SDK acceptance, 2026-10-29/30 (openhands-sdk 1.59.0 ACPAgent -> real guarded `harishcode acp` -> localhost mock)
+
+Real SDK drove the actual guarded CLI over ACP against a localhost-only OpenAI-compatible mock (fixture provider via the vendored openai-compatible driver; HARISHCODE_DISABLE_MODELS_FETCH=1 pins the models.dev refresh off - an earlier run attempted the external fetch and failed closed on DNS; the fixture now disables it by construction). No external network, provider, quota or spend.
+
+| Case | Result | Evidence |
+| ---- | ------ | -------- |
+| Guarded shell call, no reviewer | Rejected at creation (NO_REVIEWER); model informed; SDK auto-approve bridge 0 calls; side-effect marker absent; clean FINISH | drive.py + mock/frame logs |
+| Guarded edit in bound workspace, no reviewer | Rejected; target file byte-identical afterwards | drive.py MOCK_MODE=edit |
+| Cancellation (async arun + interrupt at +5s) | Client cut at 7.0s, status PAUSED; server settled stop=cancelled in 26ms; zero post-cancel provider requests from the cancelled turn | drive_cancel.py + acp_relay.py epoch-aligned frame timeline |
+| Resume after cancel | SDK respawns the ACP connection and redrives the interrupted message as a full new turn before the new message; session/load fails under HARISHCODE_DB=:memory: (harness artifact - real deployments use a persistent DB). Expected SDK semantics, not a product defect | acp_frames.log S2 prompts id=3/id=4 |
+| Model switching mid-conversation | switch_acp_model -> session/set_config_option; turn 1 all requests fake-1, turn 2 all fake-2, same session, no respawn | drive_model.py + mock model fields |
+
+Caveats kept explicit: synchronous conv.run() + interrupt() falls back to SDK pause() and cannot cancel mid-prompt (SDK-documented); the SDK's own permission auto-approve was spied at 0 calls in every run; earlier 62s settle stall was the replied-before-asked stream ordering fixed in c81a583 (regression test fails without the fix).
+
+## Reviewer presence: supported design and the ACP composition gap
+
+The shipped reviewer slice (no new mechanism): an SSE subscription GET /api/event?review=true receives a per-connection reviewer token in its server.connected event; POST /api/session/:sessionID/permission/:requestID/reply accepts once/always only with a live token (403 otherwise), rejects stay tokenless, repliedBy is stamped reviewer:<id>, and the last reviewer disconnecting rejects pending guarded asks. A session is guarded iff metadata harishcode.openhands.requireReview=true (restriction-only annotation).
+
+Composition gap: `harishcode acp` always spawns its own standalone child server (port 0, random 32-byte credential, ready-line to the parent process only). That child-only credential is the intended stdio-mode security property - and it means no reviewer can reach a guarded ACP session's server, so every guarded ask rejects NO_REVIEWER. Reviewer-present approval in the ACP shape needs a product decision (attach mode to an owner-run server, a brokered token handoff to the owner's UI, or documenting guarded ACP as denial-only). The reviewer slice itself is verifiable offline in server mode (harishcode serve + SSE reviewer + guarded session via API); that acceptance is queued.
