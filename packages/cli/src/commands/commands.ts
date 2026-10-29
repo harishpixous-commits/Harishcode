@@ -103,6 +103,24 @@ const Root = Spec.make(typeof HARISHCODE_CLI_NAME === "string" ? HARISHCODE_CLI_
           Flag.withDescription("Run auth login instead of starting the server"),
           Flag.withDefault(false),
         ),
+        permissionReview: Flag.String("permission-review").pipe(
+          Flag.withDescription(
+            'Permission review route: "client" asks the connected ACP client (default); "harishcode" never asks the client and waits for the shared Harish Code server decision - required for clients that auto-approve, such as Canvas',
+          ),
+          Flag.withDefault("client"),
+        ),
+        reviewWorkspace: Flag.String("review-workspace").pipe(
+          Flag.withDescription(
+            "Absolute path of the owner-bound workspace; required with --permission-review harishcode",
+          ),
+          Flag.optional,
+        ),
+        reviewTimeout: Flag.String("review-timeout").pipe(
+          Flag.withDescription(
+            "Milliseconds to wait for the Harish Code review decision before rejecting (1-300000, default 60000)",
+          ),
+          Flag.optional,
+        ),
       },
     }),
     Spec.make("api", {
