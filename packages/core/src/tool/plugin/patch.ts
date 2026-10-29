@@ -50,6 +50,7 @@ type Prepared =
       readonly content: string
       readonly before: string
       readonly after: string
+      readonly existed: boolean
     })
   | (Extract<Patch.Hunk, { readonly type: "delete" }> & {
       readonly target: FileAccess.Target
@@ -114,9 +115,12 @@ export const Plugin = {
               }
               const prepared: Prepared[] = []
               const updates = new Map<string, string | null>()
-              // First on-disk state per target the approval preview was prepared from: exact
-              // bytes with BOM, or null when the path did not exist. Revalidated after approval.
-              const diskBase = new Map<string, { readonly resource: string; readonly base: string | null }>()
+              // First on-disk state per target the approval preview was prepared from: raw
+              // bytes, or null when the path did not exist. Revalidated after approval. Raw bytes
+              // because decoded text collapses invalid UTF-8 to U+FFFD and repeated BOMs to one
+              // flag, so a text comparison is not byte-exact; binary and non-UTF-8 targets fail
+              // closed on any byte change while matching and preview keep the decoded-text view.
+              const diskBase = new Map<string, { readonly resource: string; readonly base: Uint8Array | null }>()
               const resolveTarget = Effect.fnUntraced(function* (value: string) {
                 const target = yield* access.resolve({ path: value, kind: "file" })
                 if (!target.externalDirectory) return target
@@ -132,26 +136,44 @@ export const Plugin = {
                   if (hunk.type === "add") {
                     const content =
                       hunk.contents.endsWith("\n") || hunk.contents === "" ? hunk.contents : `${hunk.contents}\n`
-                    // Add overwrites an existing target, so the approval diff must show the
-                    // actual bytes being replaced and the commit must revalidate them.
-                    const existing = yield* FileMutation.readText(environment.files, target.absolute).pipe(
-                      Effect.catchTags({
-                        "Environment.NotFound": () => Effect.undefined,
-                        "Environment.WrongKind": () => Effect.undefined,
-                      }),
-                    )
-                    if (!diskBase.has(target.absolute)) {
-                      diskBase.set(target.absolute, {
-                        resource: target.resource,
-                        base: existing ? Bom.join(existing.text, existing.bom) : null,
-                      })
+                    // Add overwrites whatever the target holds at this point in the patch, so
+                    // the approval diff must show the actual content being replaced: the earlier
+                    // hunk's virtual result for a repeated path, or the disk bytes for a fresh
+                    // one. The commit revalidates the captured base.
+                    const previous = updates.get(target.absolute)
+                    let before: string
+                    let existed: boolean
+                    if (previous === null) {
+                      // Deleted earlier in this patch; the add recreates the path from nothing.
+                      before = ""
+                      existed = false
+                    } else if (previous !== undefined) {
+                      before = Bom.split(previous).text
+                      existed = true
+                    } else {
+                      const existing = yield* environment.files.read(target.absolute).pipe(
+                        Effect.map((result) => result.bytes as Uint8Array | undefined),
+                        Effect.catchTags({
+                          "Environment.NotFound": () => Effect.succeed(undefined),
+                          "Environment.WrongKind": () => Effect.succeed(undefined),
+                        }),
+                      )
+                      if (!diskBase.has(target.absolute)) {
+                        diskBase.set(target.absolute, {
+                          resource: target.resource,
+                          base: existing ?? null,
+                        })
+                      }
+                      before = existing ? Bom.decodeBytes(existing).text : ""
+                      existed = existing !== undefined
                     }
                     prepared.push({
                       ...hunk,
                       target,
                       content,
-                      before: existing?.text ?? "",
+                      before,
                       after: Bom.split(content).text,
+                      existed,
                     })
                     updates.set(target.absolute, content)
                     return
@@ -166,15 +188,15 @@ export const Plugin = {
                     const before =
                       previous !== undefined
                         ? Bom.split(previous).text
-                        : yield* FileMutation.readText(environment.files, target.absolute).pipe(
+                        : yield* environment.files.read(target.absolute).pipe(
                             Effect.map((disk) => {
                               if (!diskBase.has(target.absolute)) {
                                 diskBase.set(target.absolute, {
                                   resource: target.resource,
-                                  base: Bom.join(disk.text, disk.bom),
+                                  base: disk.bytes,
                                 })
                               }
-                              return disk.text
+                              return Bom.decodeBytes(disk.bytes).text
                             }),
                             Effect.mapError(
                               (error) =>
@@ -196,7 +218,7 @@ export const Plugin = {
                   const original =
                     previous ??
                     (yield* Effect.gen(function* () {
-                      const content = yield* FileMutation.readText(environment.files, target.absolute).pipe(
+                      const disk = yield* environment.files.read(target.absolute).pipe(
                         Effect.mapError(
                           (error) =>
                             new ToolFailure({
@@ -204,11 +226,11 @@ export const Plugin = {
                             }),
                         ),
                       )
-                      const joined = Bom.join(content.text, content.bom)
                       if (!diskBase.has(target.absolute)) {
-                        diskBase.set(target.absolute, { resource: target.resource, base: joined })
+                        diskBase.set(target.absolute, { resource: target.resource, base: disk.bytes })
                       }
-                      return joined
+                      const content = Bom.decodeBytes(disk.bytes)
+                      return Bom.join(content.text, content.bom)
                     }))
                   const before = Bom.split(original).text
                   const update = yield* Effect.try({
@@ -218,15 +240,16 @@ export const Plugin = {
                   const move = hunk.movePath ? yield* resolveTarget(hunk.movePath) : undefined
                   const moveTarget = move && move.absolute !== target.absolute ? move : undefined
                   if (moveTarget && !diskBase.has(moveTarget.absolute)) {
-                    const destination = yield* FileMutation.readText(environment.files, moveTarget.absolute).pipe(
+                    const destination = yield* environment.files.read(moveTarget.absolute).pipe(
+                      Effect.map((result) => result.bytes as Uint8Array | undefined),
                       Effect.catchTags({
-                        "Environment.NotFound": () => Effect.undefined,
-                        "Environment.WrongKind": () => Effect.undefined,
+                        "Environment.NotFound": () => Effect.succeed(undefined),
+                        "Environment.WrongKind": () => Effect.succeed(undefined),
                       }),
                     )
                     diskBase.set(moveTarget.absolute, {
                       resource: moveTarget.resource,
-                      base: destination ? Bom.join(destination.text, destination.bom) : null,
+                      base: destination ?? null,
                     })
                   }
                   const next = Patch.joinBom(update.content, update.bom)
@@ -280,9 +303,10 @@ export const Plugin = {
                 [...diskBase.entries()],
                 ([absolute, entry]) =>
                   Effect.gen(function* () {
-                    const current = yield* FileMutation.readText(environment.files, absolute).pipe(
+                    const current = yield* environment.files.read(absolute).pipe(
+                      Effect.map((result) => result.bytes as Uint8Array | undefined),
                       Effect.catchTags({
-                        "Environment.NotFound": () => Effect.undefined,
+                        "Environment.NotFound": () => Effect.succeed(undefined),
                         "Environment.WrongKind": () =>
                           Effect.fail(
                             new ToolFailure({
@@ -294,7 +318,7 @@ export const Plugin = {
                     const unchanged =
                       entry.base === null
                         ? current === undefined
-                        : current !== undefined && Bom.join(current.text, current.bom) === entry.base
+                        : current !== undefined && FileMutation.sameBytes(current, entry.base)
                     if (!unchanged) {
                       return yield* new ToolFailure({
                         message: `patch verification failed: ${entry.resource} changed after the patch preview was prepared, so no files were applied. Review the changes and try again.`,
@@ -421,7 +445,7 @@ function patchFile(change: Prepared, after = change.after): typeof FileDiff.Info
     change.target.absolute,
     change.before,
     after,
-    change.type === "add" ? "added" : change.type === "delete" ? "deleted" : "modified",
+    change.type === "add" ? (change.existed ? "modified" : "added") : change.type === "delete" ? "deleted" : "modified",
   )
   return {
     ...diff,

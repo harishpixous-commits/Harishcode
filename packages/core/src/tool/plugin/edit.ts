@@ -244,7 +244,11 @@ export const Plugin = {
               const target = yield* access.resolve({ path: input.path, kind: "file" })
               yield* access.authorizeExternal([target], context)
 
-              const original = yield* FileMutation.readText(environment.files, target.absolute).pipe(
+              // The approved base is the file's raw bytes: decoded text collapses invalid UTF-8
+              // to U+FFFD and repeated BOMs to one flag, so a text comparison is not byte-exact.
+              // Binary and non-UTF-8 files therefore fail closed on any byte change; matching and
+              // preview keep the decoded-text view.
+              const originalBytes = (yield* environment.files.read(target.absolute).pipe(
                 Effect.catchTag("Environment.NotFound", () =>
                   Effect.fail(new ToolFailure({ message: `File not found: ${input.path}` })),
                 ),
@@ -253,7 +257,8 @@ export const Plugin = {
                     ? Effect.fail(new ToolFailure({ message: `Path is a directory, not a file: ${input.path}` }))
                     : Effect.fail(new ToolFailure({ message: `Unable to edit ${input.path}`, error })),
                 ),
-              )
+              )).bytes
+              const original = Bom.decodeBytes(originalBytes)
               const source = original.text
               // Strings that differ only in \r ask to change line endings themselves, so they apply to the exact
               // bytes. Every other edit matches the LF view Read shows the model and keeps the file's endings.
@@ -302,7 +307,7 @@ export const Plugin = {
               // between preparation and the post-approval commit fails the edit instead of
               // overwriting newer content. The check and the write still race non-cooperating
               // external writers - no OS-level compare-and-swap is claimed.
-              const current = yield* FileMutation.readText(environment.files, target.absolute).pipe(
+              const currentBytes = (yield* environment.files.read(target.absolute).pipe(
                 Effect.catchTags({
                   "Environment.NotFound": () =>
                     Effect.fail(
@@ -317,8 +322,8 @@ export const Plugin = {
                       }),
                     ),
                 }),
-              )
-              if (current.text !== original.text || current.bom !== original.bom) {
+              )).bytes
+              if (!FileMutation.sameBytes(currentBytes, originalBytes)) {
                 return yield* new ToolFailure({
                   message: `${input.path} changed after the edit preview was prepared, so the edit was not applied. Read the file again and retry.`,
                 })

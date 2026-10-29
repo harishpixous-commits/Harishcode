@@ -1375,6 +1375,100 @@ describe("PatchTool", () => {
     ),
   )
 
+  // Byte-exact base: 0xFF and 0xFE both decode to U+FFFD, so only a raw-byte precondition
+  // catches this drift during approval.
+  it.live("fails when only undecodable bytes of an add target change during permission approval", () =>
+    Effect.acquireUseRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => {
+        reset()
+        const target = path.join(tmp.path, "bytes.txt")
+        afterEditApproval = () =>
+          Effect.promise(() => fs.writeFile(target, Buffer.from([0x61, 0xfe, 0x0a]))).pipe(Effect.orDie)
+        return Effect.promise(() => fs.writeFile(target, Buffer.from([0x61, 0xff, 0x0a]))).pipe(
+          Effect.andThen(
+            withTool(tmp.path, (registry) =>
+              Effect.gen(function* () {
+                const result = yield* executeTool(
+                  registry,
+                  call("*** Begin Patch\n*** Add File: bytes.txt\n+replacement\n*** End Patch"),
+                )
+                expect(result.status).toBe("error")
+                expect(result.error?.message).toContain("changed after the patch preview was prepared")
+                expect(yield* Effect.promise(() => fs.readFile(target))).toEqual(Buffer.from([0x61, 0xfe, 0x0a]))
+              }),
+            ),
+          ),
+        )
+      },
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ),
+  )
+
+  // Virtual sequence: an add after an update to the same path overwrites the update's result,
+  // so its approval diff must show the virtual content (-TWO), not the disk bytes (-one).
+  it.live("shows the virtual result an add overwrites after an earlier update to the same path", () =>
+    Effect.acquireUseRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => {
+        reset()
+        const target = path.join(tmp.path, "seq.txt")
+        return Effect.promise(() => fs.writeFile(target, "one\n")).pipe(
+          Effect.andThen(
+            withTool(tmp.path, (registry) =>
+              Effect.gen(function* () {
+                const result = yield* executeTool(
+                  registry,
+                  call(
+                    "*** Begin Patch\n*** Update File: seq.txt\n@@\n-one\n+TWO\n*** Add File: seq.txt\n+final\n*** End Patch",
+                  ),
+                )
+                expect(result.status).toBe("completed")
+                const metadata = assertions[0]?.metadata as { diff?: string } | undefined
+                expect(metadata?.diff).toContain("-TWO")
+                expect(metadata?.diff).toContain("+final")
+                expect(yield* Effect.promise(() => fs.readFile(target, "utf8"))).toBe("final\n")
+              }),
+            ),
+          ),
+        )
+      },
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ),
+  )
+
+  // Virtual sequence: an add after a delete of the same path recreates from nothing, so its
+  // approval diff must be a pure addition without the deleted content as its preimage.
+  it.live("shows a pure addition when an add recreates a path deleted earlier in the same patch", () =>
+    Effect.acquireUseRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => {
+        reset()
+        const target = path.join(tmp.path, "seq.txt")
+        return Effect.promise(() => fs.writeFile(target, "gone\n")).pipe(
+          Effect.andThen(
+            withTool(tmp.path, (registry) =>
+              Effect.gen(function* () {
+                const result = yield* executeTool(
+                  registry,
+                  call(
+                    "*** Begin Patch\n*** Delete File: seq.txt\n*** Add File: seq.txt\n+fresh\n*** End Patch",
+                  ),
+                )
+                expect(result.status).toBe("completed")
+                const metadata = assertions[0]?.metadata as { files?: Array<{ patch?: string }> } | undefined
+                expect(metadata?.files?.[1]?.patch).toContain("+fresh")
+                expect(metadata?.files?.[1]?.patch).not.toContain("-gone")
+                expect(yield* Effect.promise(() => fs.readFile(target, "utf8"))).toBe("fresh\n")
+              }),
+            ),
+          ),
+        )
+      },
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ),
+  )
+
   it.live("preserves a later commit defect after earlier sequential applications", () =>
     Effect.acquireUseRelease(
       Effect.promise(() => tmpdir()),

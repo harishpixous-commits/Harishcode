@@ -454,4 +454,27 @@ describe("WriteTool", () => {
       )
     }),
   )
+  it.live("fails when only undecodable bytes change after the write preview", () =>
+    withTempDir((tmp) => {
+      const fixture = makeWriteFixture()
+      const target = path.join(tmp.path, "bytes.txt")
+      fixture.afterAssert = () =>
+        Effect.promise(() => fs.writeFile(target, Buffer.from([0x61, 0xfe, 0x0a]))).pipe(Effect.orDie)
+      return Effect.promise(() => fs.writeFile(target, Buffer.from([0x61, 0xff, 0x0a]))).pipe(
+        Effect.andThen(
+          withTool(tmp.path, fixture, (registry) =>
+            executeTool(registry, call({ path: "bytes.txt", content: "replacement\n" })),
+          ),
+        ),
+        Effect.andThen((result) =>
+          Effect.gen(function* () {
+            expect(result.status).toBe("error")
+            expect(result.error?.message).toContain("changed after the write preview was prepared")
+            expect(yield* Effect.promise(() => fs.readFile(target))).toEqual(Buffer.from([0x61, 0xfe, 0x0a]))
+            expect(fixture.writes).toEqual([])
+          }),
+        ),
+      )
+    }),
+  )
 })

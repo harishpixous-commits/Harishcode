@@ -72,9 +72,15 @@ export const Plugin = {
               }
               const target = yield* access.resolve({ path: input.path, kind: "file" })
               yield* access.authorizeExternal([target], context)
-              const current = yield* FileMutation.readText(environment.files, target.absolute).pipe(
-                Effect.catchTag("Environment.NotFound", () => Effect.undefined),
+              // The approved base is the file's raw bytes: decoded text collapses invalid UTF-8
+              // to U+FFFD and repeated BOMs to one flag, so a text comparison is not byte-exact.
+              // Binary and non-UTF-8 files therefore fail closed on any byte change; the preview
+              // keeps the decoded-text view.
+              const currentBytes = yield* environment.files.read(target.absolute).pipe(
+                Effect.map((result) => result.bytes as Uint8Array | undefined),
+                Effect.catchTag("Environment.NotFound", () => Effect.succeed(undefined)),
               )
+              const current = currentBytes ? Bom.decodeBytes(currentBytes) : undefined
               const next = Bom.split(input.content)
               const preview = fileDiff(target.resource, current?.text ?? "", next.text, current ? "modified" : "added")
               yield* permission.assert({
@@ -90,9 +96,10 @@ export const Plugin = {
               // between preparation and the post-approval commit fails the write instead of
               // overwriting newer content. The check and the write still race non-cooperating
               // external writers - no OS-level compare-and-swap is claimed.
-              const latest = yield* FileMutation.readText(environment.files, target.absolute).pipe(
+              const latestBytes = yield* environment.files.read(target.absolute).pipe(
+                Effect.map((result) => result.bytes as Uint8Array | undefined),
                 Effect.catchTags({
-                  "Environment.NotFound": () => Effect.undefined,
+                  "Environment.NotFound": () => Effect.succeed(undefined),
                   "Environment.WrongKind": () =>
                     Effect.fail(
                       new ToolFailure({
@@ -102,9 +109,9 @@ export const Plugin = {
                 }),
               )
               const unchanged =
-                latest === undefined
-                  ? current === undefined
-                  : current !== undefined && current.bom === latest.bom && current.text === latest.text
+                latestBytes === undefined
+                  ? currentBytes === undefined
+                  : currentBytes !== undefined && FileMutation.sameBytes(latestBytes, currentBytes)
               if (!unchanged) {
                 return yield* new ToolFailure({
                   message: `${input.path} changed after the write preview was prepared, so the write was not applied. Read the file again and retry.`,
