@@ -9559,6 +9559,16 @@
               }
             }
           },
+          "403": {
+            "description": "ForbiddenError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenErrorEncoded"
+                }
+              }
+            }
+          },
           "404": {
             "description": "SessionNotFoundError | PermissionNotFoundError | LocationNotFoundError",
             "content": {
@@ -9592,6 +9602,16 @@
                     "$ref": "#/components/schemas/Permission.Reply"
                   },
                   "message": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "reviewer": {
                     "anyOf": [
                       {
                         "type": "string"
@@ -10819,6 +10839,27 @@
                 }
               ],
               "description": "Only send events of these types, plus the initial server.connected event. When omitted, all events are sent."
+            },
+            "required": false
+          },
+          {
+            "name": "review",
+            "in": "query",
+            "schema": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": ["true"]
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Declare this subscription as a reviewer: registers reviewer presence for guarded permission review and returns a single-use-per-connection reviewer token in the initial server.connected event. Guarded permission requests can only be approved by a connection holding a live reviewer token."
             },
             "required": false
           }
@@ -20644,6 +20685,9 @@
         "properties": {
           "uri": {
             "type": "string"
+          },
+          "source": {
+            "$ref": "#/components/schemas/Prompt.FileSource"
           },
           "name": {
             "type": "string"
