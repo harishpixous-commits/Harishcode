@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=HarishCode
+Exec=/opt/HarishCode/ai.harishcode %U
+Terminal=false
+Type=Application
+Icon=ai.harishcode
+StartupWMClass=ai.harishcode.desktop
+NoDisplay=true
+Comment=Open source AI coding agent
+Categories=Development;

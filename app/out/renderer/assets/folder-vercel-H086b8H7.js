@@ -1,7 +1,0 @@
-var e=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">\r
-  <path fill="currentColor"\r
-    d="m13.844 7.536-1.288-1.072A2 2 0 0 0 11.276 6H4a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h24a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2H15.124a2 2 0 0 1-1.28-.464" />\r
-  <path fill="#cfd8dc" d="m22 12 10 16H12Z" />\r
-</svg>\r
-`;export{e as default};
-//# sourceMappingURL=folder-vercel-H086b8H7.js.map

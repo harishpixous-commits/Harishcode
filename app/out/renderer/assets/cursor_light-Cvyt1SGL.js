@@ -1,3 +1,0 @@
-var e=`<svg version="1.1" viewBox="0 0 32 32" xml:space="preserve" xmlns="http://www.w3.org/2000/svg"><g fill="#424242" fill-rule="evenodd"><path d="m16 30 12-20v14z"/><path d="m4 10 12-8 12 8z"/><path d="m4 10 12 6v14l-12-6z"/></g></svg>\r
-`;export{e as default};
-//# sourceMappingURL=cursor_light-Cvyt1SGL.js.map

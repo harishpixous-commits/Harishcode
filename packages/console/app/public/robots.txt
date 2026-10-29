@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+
+# Disallow shared content pages
+Disallow: /s/
+Disallow: /share/
+
+Sitemap: https://harishcode.ai/sitemap.xml
+Sitemap: https://harishcode.ai/v2/sitemap.xml
+Sitemap: https://harishcode.ai/data/sitemap.xml

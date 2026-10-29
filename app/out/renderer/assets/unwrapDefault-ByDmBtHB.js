@@ -1,2 +1,0 @@
-function e(e){return typeof e==`object`&&e&&`default`in e?e.default:e}export{e as t};
-//# sourceMappingURL=unwrapDefault-ByDmBtHB.js.map

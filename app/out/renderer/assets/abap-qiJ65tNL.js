@@ -1,2 +1,0 @@
-var e=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><path fill="#0288d1" d="M2 10v12h14l14-12"/></svg>`;export{e as default};
-//# sourceMappingURL=abap-qiJ65tNL.js.map

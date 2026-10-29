@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "@harishcode/server",
+  "version": "2.2.0",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/harishpixous-commits/Harishcode.git",
+    "directory": "packages/server"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "build": "bun run script/build.ts",
+    "pack": "bun run script/pack.ts",
+    "test": "bun test --only-failures",
+    "typecheck": "bun check --no-script -b",
+    "typecheck:tsc": "tsc -b",
+    "probe:workerd": "bun run script/workerd-probe.ts"
+  },
+  "dependencies": {
+    "@effect/platform-node": "catalog:",
+    "@effect/platform-node-shared": "catalog:",
+    "@harishcode/core": "workspace:*",
+    "@harishcode/protocol": "workspace:*",
+    "@harishcode/schema": "workspace:*",
+    "@harishcode/simulation": "workspace:*",
+    "@harishcode/util": "workspace:*",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@harishcode-ai/pty": "0.3.1",
+    "@harishcode/client": "workspace:*",
+    "@harishcode/plugin": "workspace:*",
+    "@tsconfig/bun": "catalog:",
+    "@types/bun": "catalog:",
+    "@typescript/native": "catalog:",
+    "fast-check": "catalog:"
+  }
+}

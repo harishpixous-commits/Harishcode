@@ -1,0 +1,578 @@
+---
+title: CLI
+description: Opciones y comandos de la CLI de HarishCode.
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components"
+
+La CLI de HarishCode de forma predeterminada inicia el [TUI](/docs/tui) cuando se ejecuta sin ningún argumento.
+
+```bash
+harishcode
+```
+
+Pero también acepta comandos como se documenta en esta página. Esto le permite interactuar con HarishCode mediante programación.
+
+```bash
+harishcode run "Explain how closures work in JavaScript"
+```
+
+---
+
+### tui
+
+Inicie la interfaz de usuario del terminal HarishCode.
+
+```bash
+harishcode [project]
+```
+
+#### Opciones
+
+| Opción                                   | Corta | Descripción                                                           |
+| ---------------------------------------- | ----- | --------------------------------------------------------------------- |
+| <nobr><code>{"--continue"}</code></nobr> | `-c`  | Continuar la última sesión                                            |
+| <nobr><code>{"--session"}</code></nobr>  | `-s`  | ID de sesión para continuar                                           |
+| <nobr><code>{"--fork"}</code></nobr>     |       | Bifurcar la sesión al continuar (usar con `--continue` o `--session`) |
+| <nobr><code>{"--prompt"}</code></nobr>   |       | Aviso de uso                                                          |
+| <nobr><code>{"--model"}</code></nobr>    | `-m`  | Modelo a utilizar en forma de proveedor/modelo                        |
+| <nobr><code>{"--agent"}</code></nobr>    |       | Agente a utilizar                                                     |
+| <nobr><code>{"--port"}</code></nobr>     |       | Puerto para escuchar                                                  |
+| <nobr><code>{"--hostname"}</code></nobr> |       | Nombre de host para escuchar                                          |
+
+---
+
+## Comandos
+
+La CLI de HarishCode también tiene los siguientes comandos.
+
+---
+
+### attach
+
+Conecte una terminal a un servidor backend HarishCode que ya se esté ejecutando y iniciado mediante los comandos `serve` o `web`.
+
+```bash
+harishcode attach [url]
+```
+
+Esto permite usar TUI con un backend remoto HarishCode. Por ejemplo:
+
+```bash
+# Start the backend server for web/mobile access
+harishcode web --port 4096 --hostname 0.0.0.0
+
+# In another terminal, attach the TUI to the running backend
+harishcode attach http://10.20.30.40:4096
+```
+
+#### Opciones
+
+| Opción                                   | Corta | Descripción                                                                               |
+| ---------------------------------------- | ----- | ----------------------------------------------------------------------------------------- |
+| <nobr><code>{"--dir"}</code></nobr>      |       | Directorio de trabajo para iniciar TUI en                                                 |
+| <nobr><code>{"--continue"}</code></nobr> | `-c`  | Continuar la última sesión                                                                |
+| <nobr><code>{"--session"}</code></nobr>  | `-s`  | ID de sesión para continuar                                                               |
+| <nobr><code>{"--fork"}</code></nobr>     |       | Bifurcar la sesión al continuar (usar con `--continue` o `--session`)                     |
+| <nobr><code>{"--password"}</code></nobr> | `-p`  | Contraseña de autenticación básica (predeterminada: `HARISHCODE_SERVER_PASSWORD`)           |
+| <nobr><code>{"--username"}</code></nobr> | `-u`  | Usuario de autenticación básica (predeterminado: `HARISHCODE_SERVER_USERNAME` u `harishcode`) |
+
+---
+
+### auth
+
+Comando para administrar credenciales e iniciar sesión para proveedores.
+
+```bash
+harishcode auth [command]
+```
+
+---
+
+#### login
+
+HarishCode funciona con la lista de proveedores en [Models.dev](https://models.dev), por lo que puede usar `harishcode auth login` para configurar las claves API para cualquier proveedor que desee utilizar. Esto se almacena en `~/.local/share/harishcode/auth.json`.
+
+```bash
+harishcode auth login
+```
+
+Cuando se inicia HarishCode, carga los proveedores desde el archivo de credenciales. Y si hay claves definidas en sus entornos o un archivo `.env` en su proyecto.
+
+---
+
+#### list
+
+Enumera todos los proveedores autenticados tal como están almacenados en el archivo de credenciales.
+
+```bash
+harishcode auth list
+```
+
+O la versión corta.
+
+```bash
+harishcode auth ls
+```
+
+---
+
+#### logout
+
+Cierra tu sesión de un proveedor eliminándolo del archivo de credenciales.
+
+```bash
+harishcode auth logout
+```
+
+---
+
+### github
+
+Administre el agente GitHub para la automatización del repositorio.
+
+```bash
+harishcode github [command]
+```
+
+---
+
+#### install
+
+Instale el agente GitHub en su repositorio.
+
+```bash
+harishcode github install
+```
+
+Esto configura el flujo de trabajo de acciones GitHub necesario y lo guía a través del proceso de configuración. [Más información](/docs/github).
+
+---
+
+#### run
+
+Ejecute el agente GitHub. Esto se usa normalmente en acciones GitHub.
+
+```bash
+harishcode github run
+```
+
+##### Opciones
+
+| Opción                                | Descripción                                    |
+| ------------------------------------- | ---------------------------------------------- |
+| <nobr><code>{"--event"}</code></nobr> | GitHub evento simulado para ejecutar el agente |
+| <nobr><code>{"--token"}</code></nobr> | GitHub token de acceso personal                |
+
+---
+
+### mcp
+
+Administrar servidores de protocolo de contexto modelo.
+
+```bash
+harishcode mcp [command]
+```
+
+---
+
+#### add
+
+Agregue un servidor MCP a su configuración.
+
+```bash
+harishcode mcp add
+```
+
+Este comando lo guiará para agregar un servidor MCP local o remoto.
+
+---
+
+#### list
+
+Enumere todos los servidores MCP configurados y su estado de conexión.
+
+```bash
+harishcode mcp list
+```
+
+O utilice la versión corta.
+
+```bash
+harishcode mcp ls
+```
+
+---
+
+#### auth
+
+Autentíquese con un servidor MCP habilitado para OAuth.
+
+```bash
+harishcode mcp auth [name]
+```
+
+Si no proporciona un nombre de servidor, se le pedirá que seleccione entre los servidores compatibles con OAuth disponibles.
+
+También puede enumerar los servidores compatibles con OAuth y su estado de autenticación.
+
+```bash
+harishcode mcp auth list
+```
+
+O utilice la versión corta.
+
+```bash
+harishcode mcp auth ls
+```
+
+---
+
+#### logout
+
+Elimine las credenciales OAuth para un servidor MCP.
+
+```bash
+harishcode mcp logout [name]
+```
+
+---
+
+#### debug
+
+Depurar problemas de conexión OAuth para un servidor MCP.
+
+```bash
+harishcode mcp debug <name>
+```
+
+---
+
+### models
+
+Enumere todos los modelos disponibles de los proveedores configurados.
+
+```bash
+harishcode models [provider]
+```
+
+Este comando muestra todos los modelos disponibles en sus proveedores configurados en el formato `provider/model`.
+
+Esto es útil para determinar el nombre exacto del modelo que se usará en [su configuración](/docs/config/).
+
+Opcionalmente, puede pasar un ID de proveedor para filtrar modelos por ese proveedor.
+
+```bash
+harishcode models anthropic
+```
+
+#### Opciones
+
+| Opción                                  | Descripción                                                                 |
+| --------------------------------------- | --------------------------------------------------------------------------- |
+| <nobr><code>{"--refresh"}</code></nobr> | Actualizar la caché de modelos desde models.dev                             |
+| <nobr><code>{"--verbose"}</code></nobr> | Utilice una salida del modelo más detallada (incluye metadatos como costos) |
+
+Utilice el indicador `--refresh` para actualizar la lista de modelos almacenados en caché. Esto es útil cuando se han agregado nuevos modelos a un proveedor y desea verlos en HarishCode.
+
+```bash
+harishcode models --refresh
+```
+
+---
+
+### run
+
+Ejecute harishcode en modo no interactivo pasando un mensaje directamente.
+
+```bash
+harishcode run [message..]
+```
+
+Esto es útil para secuencias de comandos, automatización o cuando desea una respuesta rápida sin iniciar el TUI completo. Por ejemplo.
+
+```bash "harishcode run"
+harishcode run Explain the use of context in Go
+```
+
+También puede conectarse a una instancia `harishcode serve` en ejecución para evitar tiempos de arranque en frío del servidor MCP en cada ejecución:
+
+```bash
+# Start a headless server in one terminal
+harishcode serve
+
+# In another terminal, run commands that attach to it
+harishcode run --attach http://localhost:4096 "Explain async/await in JavaScript"
+```
+
+#### Opciones
+
+| Opción                                   | Corta | Descripción                                                                               |
+| ---------------------------------------- | ----- | ----------------------------------------------------------------------------------------- |
+| <nobr><code>{"--command"}</code></nobr>  |       | El comando a ejecutar, use mensaje para args                                              |
+| <nobr><code>{"--continue"}</code></nobr> | `-c`  | Continuar la última sesión                                                                |
+| <nobr><code>{"--session"}</code></nobr>  | `-s`  | ID de sesión para continuar                                                               |
+| <nobr><code>{"--fork"}</code></nobr>     |       | Bifurcar la sesión al continuar (usar con `--continue` o `--session`)                     |
+| <nobr><code>{"--model"}</code></nobr>    | `-m`  | Modelo a utilizar en forma de proveedor/modelo                                            |
+| <nobr><code>{"--agent"}</code></nobr>    |       | Agente a utilizar                                                                         |
+| <nobr><code>{"--file"}</code></nobr>     | `-f`  | Archivo(s) para adjuntar al mensaje                                                       |
+| <nobr><code>{"--format"}</code></nobr>   |       | Formato: predeterminado (formateado) o json (eventos JSON sin formato)                    |
+| <nobr><code>{"--title"}</code></nobr>    |       | Título de la sesión (utiliza un mensaje truncado si no se proporciona ningún valor)       |
+| <nobr><code>{"--attach"}</code></nobr>   |       | Adjuntar a un servidor harishcode en ejecución (por ejemplo, http://localhost:4096)         |
+| <nobr><code>{"--password"}</code></nobr> | `-p`  | Contraseña de autenticación básica (predeterminada: `HARISHCODE_SERVER_PASSWORD`)           |
+| <nobr><code>{"--username"}</code></nobr> | `-u`  | Usuario de autenticación básica (predeterminado: `HARISHCODE_SERVER_USERNAME` u `harishcode`) |
+| <nobr><code>{"--dir"}</code></nobr>      |       | Directorio de ejecución, o ruta en el servidor remoto al adjuntar                         |
+| <nobr><code>{"--variant"}</code></nobr>  |       | Variante del modelo (esfuerzo de razonamiento específico del proveedor)                   |
+| <nobr><code>{"--thinking"}</code></nobr> |       | Mostrar bloques de pensamiento                                                            |
+| <nobr><code>{"--port"}</code></nobr>     |       | Puerto para el servidor local (el puerto predeterminado es aleatorio)                     |
+
+---
+
+### serve
+
+Inicie un servidor HarishCode sin cabeza para acceso API. Consulte los [documentos del servidor](/docs/server) para conocer la interfaz HTTP completa.
+
+```bash
+harishcode serve
+```
+
+Esto inicia un servidor HTTP que proporciona acceso API a la funcionalidad harishcode sin la interfaz TUI. Configure `HARISHCODE_SERVER_PASSWORD` para habilitar la autenticación básica HTTP (el nombre de usuario predeterminado es `harishcode`).
+
+#### Opciones
+
+| Opción                                   | Descripción                                          |
+| ---------------------------------------- | ---------------------------------------------------- |
+| <nobr><code>{"--port"}</code></nobr>     | Puerto para escuchar                                 |
+| <nobr><code>{"--hostname"}</code></nobr> | Nombre de host para escuchar                         |
+| <nobr><code>{"--mdns"}</code></nobr>     | Habilitar el descubrimiento de mDNS                  |
+| <nobr><code>{"--cors"}</code></nobr>     | Orígenes de navegador adicionales para permitir CORS |
+
+---
+
+### session
+
+Administrar HarishCode sesiones.
+
+```bash
+harishcode session [command]
+```
+
+---
+
+#### list
+
+Enumere todas las sesiones HarishCode.
+
+```bash
+harishcode session list
+```
+
+##### Opciones
+
+| Opción                                    | Corta | Descripción                             |
+| ----------------------------------------- | ----- | --------------------------------------- |
+| <nobr><code>{"--max-count"}</code></nobr> | `-n`  | Limitar a N sesiones más recientes      |
+| <nobr><code>{"--format"}</code></nobr>    |       | Formato de salida: tabla o json (tabla) |
+
+---
+
+### stats
+
+Muestre el uso de tokens y las estadísticas de costos para sus sesiones HarishCode.
+
+```bash
+harishcode stats
+```
+
+#### Opciones
+
+| Opción                                  | Descripción                                                                                                              |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| <nobr><code>{"--days"}</code></nobr>    | Mostrar estadísticas de los últimos N días (todo el tiempo)                                                              |
+| <nobr><code>{"--tools"}</code></nobr>   | Número de herramientas para mostrar (todas)                                                                              |
+| <nobr><code>{"--models"}</code></nobr>  | Mostrar el desglose del uso del modelo (oculto de forma predeterminada). Pase un número para mostrar la parte superior N |
+| <nobr><code>{"--project"}</code></nobr> | Filtrar por proyecto (todos los proyectos, cadena vacía: proyecto actual)                                                |
+
+---
+
+### export
+
+Exportar datos de la sesión como JSON.
+
+```bash
+harishcode export [sessionID]
+```
+
+Si no proporciona una ID de sesión, se le pedirá que seleccione entre las sesiones disponibles.
+
+---
+
+### import
+
+Importe datos de sesión desde un archivo JSON.
+
+```bash
+harishcode import <file>
+```
+
+```bash
+harishcode import session.json
+```
+
+---
+
+### web
+
+Inicie un servidor HarishCode sin cabeza con una interfaz web.
+
+```bash
+harishcode web
+```
+
+Esto inicia un servidor HTTP y abre un navegador web para acceder a HarishCode a través de una interfaz web. Configure `HARISHCODE_SERVER_PASSWORD` para habilitar la autenticación básica HTTP (el nombre de usuario predeterminado es `harishcode`).
+
+#### Opciones
+
+| Opción                                   | Descripción                                          |
+| ---------------------------------------- | ---------------------------------------------------- |
+| <nobr><code>{"--port"}</code></nobr>     | Puerto para escuchar                                 |
+| <nobr><code>{"--hostname"}</code></nobr> | Nombre de host para escuchar                         |
+| <nobr><code>{"--mdns"}</code></nobr>     | Habilitar el descubrimiento de mDNS                  |
+| <nobr><code>{"--cors"}</code></nobr>     | Orígenes de navegador adicionales para permitir CORS |
+
+---
+
+### acp
+
+Inicie un servidor ACP (Agent Client Protocol).
+
+```bash
+harishcode acp
+```
+
+Este comando inicia un servidor ACP que se comunica a través de stdin/stdout usando nd-JSON.
+
+#### Opciones
+
+| Opción                                   | Descripción                  |
+| ---------------------------------------- | ---------------------------- |
+| <nobr><code>{"--cwd"}</code></nobr>      | Directorio de trabajo        |
+| <nobr><code>{"--port"}</code></nobr>     | Puerto para escuchar         |
+| <nobr><code>{"--hostname"}</code></nobr> | Nombre de host para escuchar |
+
+---
+
+### uninstall
+
+Desinstale HarishCode y elimine todos los archivos relacionados.
+
+```bash
+harishcode uninstall
+```
+
+#### Opciones
+
+| Opción                                      | Corta | Descripción                               |
+| ------------------------------------------- | ----- | ----------------------------------------- |
+| <nobr><code>{"--keep-config"}</code></nobr> | `-c`  | Mantener archivos de configuración        |
+| <nobr><code>{"--keep-data"}</code></nobr>   | `-d`  | Conservar datos de sesión e instantáneas  |
+| <nobr><code>{"--dry-run"}</code></nobr>     |       | Mostrar lo que se eliminaría sin eliminar |
+| <nobr><code>{"--force"}</code></nobr>       | `-f`  | Saltar mensajes de confirmación           |
+
+---
+
+### upgrade
+
+Actualiza harishcode a la última versión o a una versión específica.
+
+```bash
+harishcode upgrade [target]
+```
+
+Para actualizar a la última versión.
+
+```bash
+harishcode upgrade
+```
+
+Para actualizar a una versión específica.
+
+```bash
+harishcode upgrade v0.1.48
+```
+
+#### Opciones
+
+| Opción                                 | Corta | Descripción                                                         |
+| -------------------------------------- | ----- | ------------------------------------------------------------------- |
+| <nobr><code>{"--method"}</code></nobr> | `-m`  | El método de instalación que se utilizó; curl, npm, pnpm, bun, brew |
+
+---
+
+## Opciones globales
+
+La CLI de HarishCode toma las siguientes banderas globales.
+
+| Opción                                     | Corta | Descripción                                  |
+| ------------------------------------------ | ----- | -------------------------------------------- |
+| <nobr><code>{"--help"}</code></nobr>       | `-h`  | Mostrar ayuda                                |
+| <nobr><code>{"--version"}</code></nobr>    | `-v`  | Número de versión de impresión               |
+| <nobr><code>{"--print-logs"}</code></nobr> |       | Imprimir registros en stderr                 |
+| <nobr><code>{"--log-level"}</code></nobr>  |       | Nivel de registro (DEBUG, INFO, WARN, ERROR) |
+
+---
+
+## Variables de entorno
+
+HarishCode se puede configurar mediante variables de entorno.
+
+| Variable                              | Type     | Description                                                                     |
+| ------------------------------------- | -------- | ------------------------------------------------------------------------------- |
+| `HARISHCODE_GIT_BASH_PATH`              | cadena   | Ruta al ejecutable de Git Bash en Windows                                       |
+| `HARISHCODE_CONFIG`                     | cadena   | Ruta al archivo de configuración                                                |
+| `HARISHCODE_CONFIG_DIR`                 | cadena   | Ruta al directorio de configuración                                             |
+| `HARISHCODE_CONFIG_CONTENT`             | cadena   | Contenido de configuración json en línea                                        |
+| `HARISHCODE_DISABLE_AUTOUPDATE`         | booleano | Deshabilitar las comprobaciones automáticas de actualizaciones                  |
+| `HARISHCODE_DISABLE_PRUNE`              | booleano | Deshabilitar la poda de datos antiguos                                          |
+| `HARISHCODE_DISABLE_TERMINAL_TITLE`     | booleano | Deshabilitar las actualizaciones automáticas de títulos de terminal             |
+| `HARISHCODE_PERMISSION`                 | cadena   | Configuración de permisos json incorporados                                     |
+| `HARISHCODE_DISABLE_DEFAULT_PLUGINS`    | booleano | Deshabilitar complementos predeterminados                                       |
+| `HARISHCODE_DISABLE_LSP_DOWNLOAD`       | booleano | Deshabilitar las descargas automáticas del servidor LSP                         |
+| `HARISHCODE_ENABLE_EXPERIMENTAL_MODELS` | booleano | Habilitar modelos experimentales                                                |
+| `HARISHCODE_DISABLE_AUTOCOMPACT`        | booleano | Deshabilitar la compactación automática de contexto                             |
+| `HARISHCODE_DISABLE_CLAUDE_CODE`        | booleano | Deshabilitar la lectura desde `.claude` (mensaje + habilidades)                 |
+| `HARISHCODE_DISABLE_CLAUDE_CODE_PROMPT` | booleano | Desactivar lectura `~/.claude/CLAUDE.md`                                        |
+| `HARISHCODE_DISABLE_CLAUDE_CODE_SKILLS` | booleano | Deshabilitar la carga `.claude/skills`                                          |
+| `HARISHCODE_DISABLE_MODELS_FETCH`       | booleano | Deshabilitar la recuperación de modelos desde fuentes remotas                   |
+| `HARISHCODE_FAKE_VCS`                   | cadena   | Proveedor de VCS falso para fines de prueba                                     |
+| `HARISHCODE_CLIENT`                     | cadena   | Identificador de cliente (por defecto `cli`)                                    |
+| `HARISHCODE_ENABLE_EXA`                 | booleano | Habilitar las herramientas de búsqueda web de Exa                               |
+| `HARISHCODE_SERVER_PASSWORD`            | cadena   | Habilite la autenticación básica para `serve`/`web`                             |
+| `HARISHCODE_SERVER_USERNAME`            | cadena   | Anular el nombre de usuario de autenticación básica (predeterminado `harishcode`) |
+| `HARISHCODE_MODELS_URL`                 | cadena   | URL personalizada para buscar la configuración de modelos                       |
+
+---
+
+### Experimental
+
+Estas variables de entorno habilitan funciones experimentales que pueden cambiar o eliminarse.
+
+| Variable                                        | Type     | Description                                                |
+| ----------------------------------------------- | -------- | ---------------------------------------------------------- |
+| `HARISHCODE_EXPERIMENTAL`                         | booleano | Habilitar funciones experimentales de la bandera global    |
+| `HARISHCODE_EXPERIMENTAL_ICON_DISCOVERY`          | booleano | Habilitar descubrimiento de íconos                         |
+| `HARISHCODE_EXPERIMENTAL_DISABLE_COPY_ON_SELECT`  | booleano | Deshabilitar copia al seleccionar en TUI                   |
+| `HARISHCODE_EXPERIMENTAL_BASH_DEFAULT_TIMEOUT_MS` | número   | Tiempo de espera predeterminado para comandos bash en ms   |
+| `HARISHCODE_EXPERIMENTAL_OUTPUT_TOKEN_MAX`        | número   | Tokens de salida máximos para respuestas LLM               |
+| `HARISHCODE_EXPERIMENTAL_FILEWATCHER`             | booleano | Habilite el observador de archivos para todo el directorio |
+| `HARISHCODE_EXPERIMENTAL_OXFMT`                   | booleano | Habilitar el formateador oxfmt                             |
+| `HARISHCODE_EXPERIMENTAL_LSP_TOOL`                | booleano | Habilitar herramienta experimental LSP                     |
+| `HARISHCODE_EXPERIMENTAL_DISABLE_FILEWATCHER`     | booleano | Deshabilitar el observador de archivos                     |
+| `HARISHCODE_EXPERIMENTAL_EXA`                     | booleano | Habilitar funciones experimentales de Exa                  |
+| `HARISHCODE_EXPERIMENTAL_LSP_TY`                  | booleano | Habilitar Habilitar TY LSP para archivos python            |
+| `HARISHCODE_EXPERIMENTAL_PLAN_MODE`               | booleano | Habilitar modo de plan                                     |
+| `HARISHCODE_EXPERIMENTAL_EVENT_SYSTEM`            | booleano | Habilitar sistema de eventos experimental                  |
+| `HARISHCODE_EXPERIMENTAL_NATIVE_LLM`              | booleano | Habilitar ruta nativa de solicitud LLM                     |
+| `HARISHCODE_EXPERIMENTAL_PARALLEL`                | booleano | Habilitar ejecución paralela de búsqueda web               |
+| `HARISHCODE_EXPERIMENTAL_SCOUT`                   | booleano | Habilitar subagente Scout                                  |
+| `HARISHCODE_EXPERIMENTAL_WORKSPACES`              | booleano | Habilitar soporte de espacios de trabajo                   |

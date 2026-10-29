@@ -1,24 +1,39 @@
-# dependencies
-node_modules/
-**/node_modules/
-
-# packaged application archives (build artifacts, not source)
-*.asar
-dist/
-release/
-
-# build logs / temp
-*.log
-npm-debug.log*
-.tmp/
-
-# editor / OS noise
 .DS_Store
-Thumbs.db
-.idea/
-.vscode/
-
-# env & secrets
+node_modules
+.worktrees
+.sst
 .env
-.env.*
-!.env.example
+.env.local
+.idea
+.vscode
+.codex
+*~
+playground
+tmp
+dist
+dist-node
+ts-dist
+.turbo
+.typecheck-profiles
+**/.serena
+.serena/
+**/.omo
+.omo/
+/result
+refs
+Session.vim
+/harishcode.json
+a.out
+target
+.scripts
+.cache
+.direnv/
+
+# Local dev files
+harishcode-dev
+UPCOMING_CHANGELOG.md
+RELEASE_REVIEW.md
+logs/
+*.bun-build
+tsconfig.tsbuildinfo
+/artifacts/

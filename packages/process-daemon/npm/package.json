@@ -1,0 +1,40 @@
+{
+  "name": "@harishcode/pty",
+  "version": "0.3.2",
+  "description": "Persistent PTY service for HarishCode",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/harishpixous-commits/Harishcode.git",
+    "directory": "packages/process-daemon/npm"
+  },
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "harishcode-pty": "./bin/harishcode-pty.js"
+  },
+  "files": [
+    "bin",
+    "index.d.ts",
+    "index.js"
+  ],
+  "optionalDependencies": {
+    "@harishcode/pty-darwin-arm64": "0.3.2",
+    "@harishcode/pty-darwin-x64": "0.3.2",
+    "@harishcode/pty-linux-arm64-gnu": "0.3.2",
+    "@harishcode/pty-linux-arm64-musl": "0.3.2",
+    "@harishcode/pty-linux-x64-gnu": "0.3.2",
+    "@harishcode/pty-linux-x64-musl": "0.3.2",
+    "@harishcode/pty-win32-arm64": "0.3.2",
+    "@harishcode/pty-win32-x64": "0.3.2"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

@@ -1,0 +1,99 @@
+---
+title: "Overview"
+---
+
+`@harishcode/sdk` hosts HarishCode directly inside your application. Unlike the
+[network client](/build/client), it assembles the HarishCode server and routes API
+calls through its HTTP router in memory. It opens no HTTP listener and adds no
+network hop between the client and server.
+
+For Cloudflare Durable Objects, see the [Cloudflare guide](/build/sdk/cloudflare).
+
+Install the SDK:
+
+```sh
+bun add @harishcode/sdk
+```
+
+## Create a host
+
+`HarishCode.create()` returns an explicitly owned host. Use `await using` to
+release its router, Location services, fibers, and scoped plugin registrations:
+
+```ts
+import { HarishCode } from "@harishcode/sdk"
+
+await using harishcode = await HarishCode.create()
+const session = await harishcode.sessions.create({
+  location: { directory: "/workspace" },
+})
+
+await harishcode.sessions.prompt({
+  sessionID: session.id,
+  text: "Review the current changes",
+})
+```
+
+Call `await harishcode.close()` explicitly when explicit resource management is
+not available.
+
+The embedded host uses the same Promise values, declared errors, request
+options, and `AsyncIterable` streams as `@harishcode/client`. It exposes the
+full generated client and adds the convenience aliases `sessions` and `events`
+for the session and event groups.
+
+## Worktrees
+
+Worktree operations require a `projectID`. Create and refresh load configuration and plugins from the project's saved
+canonical checkout. List reads saved inventory only; remove activates canonical plugins and uses the recorded strategy,
+failing if that strategy is unavailable.
+
+```ts
+const projectID = session.projectID
+const worktree = await harishcode.worktree.create({ projectID, name: "task" })
+await harishcode.worktree.refresh({ projectID })
+await harishcode.worktree.remove({ projectID, directory: worktree.directory, force: false })
+```
+
+Refresh discovers worktrees across known checkout roots using all available strategies. Register a custom strategy
+through a [plugin's worktree transform](/build/plugins/server#worktrees).
+
+## Stream events
+
+```ts
+for await (const event of harishcode.events.subscribe()) {
+  console.log(event.type)
+}
+```
+
+Pass an `AbortSignal` through the generated request options, or leave an
+iteration to cancel its response body.
+
+## Customize
+
+Customize your HarishCode instance by registering plugins. Pass plugins to
+`HarishCode.create()` to customize agents, models, tools, and other behavior when
+the embedded host starts:
+
+```ts
+import { Plugin } from "@harishcode/plugin"
+import { HarishCode } from "@harishcode/sdk"
+
+const plugin = Plugin.define({
+  id: "customize-agent",
+  async setup(ctx) {
+    await ctx.agent.transform((agents) => {
+      agents.update("build", (agent) => {
+        agent.description = "Builds features and fixes bugs for our team"
+      })
+    })
+  },
+})
+
+await using harishcode = await HarishCode.create({ plugins: [plugin] })
+```
+
+Call `await harishcode.plugin(plugin)` to register another plugin after startup.
+
+See the [full plugins documentation](/build/plugins/server) for plugin hooks,
+transforms, tools, and the complete plugin context.

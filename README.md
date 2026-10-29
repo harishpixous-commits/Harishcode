@@ -1,109 +1,135 @@
 <p align="center">
-  <img src="assets/logo-lockup.png" alt="Harish Code" width="420" />
+  <a href="https://github.com/harishpixous-commits/Harishcode">
+    <picture>
+      <source srcset="packages/console/app/src/asset/logo-ornate-dark.svg" media="(prefers-color-scheme: dark)">
+      <source srcset="packages/console/app/src/asset/logo-ornate-light.svg" media="(prefers-color-scheme: light)">
+      <img src="packages/console/app/src/asset/logo-ornate-light.svg" alt="Harish Code logo">
+    </picture>
+  </a>
 </p>
 
-<h1 align="center">Harish Code</h1>
+<p align="center">The open source AI coding agent.</p>
 
 <p align="center">
-  <strong>The open source AI coding agent.</strong><br/>
-  A desktop coding agent for Windows, built and maintained by
-  <a href="https://github.com/harishpixous-commits">@harishpixous-commits</a>.
-</p>
-
-<p align="center">
-  <a href="https://github.com/harishpixous-commits/Harishcode">Repository</a> ·
-  <a href="https://github.com/harishpixous-commits">Author</a> ·
-  <a href="docs/BRANDING.md">Branding guide</a> ·
-  <a href="docs/CHANGELOG.md">Changelog</a>
+  <a href="https://github.com/harishpixous-commits/Harishcode/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/github/license/harishpixous-commits/Harishcode?style=flat-square" /></a>
+  <a href="https://github.com/harishpixous-commits/Harishcode/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/harishpixous-commits/Harishcode?style=flat-square" /></a>
+  <a href="https://github.com/harishpixous-commits/Harishcode/actions/workflows/check.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/harishpixous-commits/Harishcode/check.yml?style=flat-square&branch=main" /></a>
+  <a href="https://github.com/harishpixous-commits/Harishcode/commits/main"><img alt="Last commit" src="https://img.shields.io/github/last-commit/harishpixous-commits/Harishcode?style=flat-square" /></a>
 </p>
 
 ---
 
-## What is Harish Code?
+**Harish Code** is a terminal-first AI coding agent with a native desktop app. It runs locally, talks to the model providers you choose, and edits your repository the way a careful engineer would: reading context, proposing diffs, running commands, and reporting back.
 
-Harish Code is a desktop coding agent for Windows. It runs entirely on your
-own machine, keeps your sessions local, and works with the free model providers
-that ship with the app, plus Ollama and any OpenAI-compatible endpoint you
-configure.
+- **Two modes, one keystroke** — `build` for full-access work, `plan` for read-only exploration.
+- **Bring your own model** — Anthropic, OpenAI, Google, OpenRouter, Bedrock, Vertex, Groq, or any OpenAI-compatible endpoint.
+- **Free tier included** — the hosted gateway ships a rotating set of free models, so you can start without a key.
+- **Terminal UI and desktop app** — the same core, driven by a keyboard-first TUI or a frameless desktop shell.
+- **Local-first** — sessions, credentials and project state stay on your machine.
 
-Ask it to write, explain, refactor or review code — it reads your project,
-runs commands, and keeps every conversation attached to the folder you opened.
+---
 
-## Features
-
-- **Sessions** — persistent chat history per project, with search and drafts
-- **Free models** — Beam Free, Flint 40B Free, DeepSeek V4.1 Flash Free,
-  GLM-5.3-Flash Free, MiMo-V2.6-Flash Free, Nemotron 3.5 and more
-- **Local models** — first-class Ollama support
-- **Providers** — OpenAI, Anthropic, Google, GitHub Copilot and any
-  OpenAI-compatible base URL
-- **Projects & worktrees** — per-repository context, git worktree aware
-- **Pairing** — connect another device to your own local server
-- **Theming** — light, dark, system, plus custom UI/code/terminal fonts
-
-## Install (Windows)
-
-The packaged application is distributed as a Windows build:
-
-```
-Harish Code/
-├── Harish Code.exe
-└── resources/
-    ├── app.asar
-    ├── opencode-cli.exe
-    └── ...
-```
-
-Run `Harish Code.exe`. On first launch the app starts a local server
-(`127.0.0.1`) and writes its profile to `%APPDATA%`.
-
-> The compiled runtime lives in [`app/`](app). `app.asar` is not committed —
-> it is produced from `app/` with the packer in [`build/`](build).
-
-## Repository layout
-
-| Path | Purpose |
-| --- | --- |
-| [`app/`](app) | Patched application runtime — `out/`, `resources/`, `package.json` |
-| [`assets/`](assets) | Harish Code logo marks, lockups and favicons |
-| [`build/`](build) | Tooling to repack `app.asar` reproducibly |
-| [`docs/`](docs) | Branding notes and changelog |
-
-## Building
+### Installation
 
 ```bash
-# 1. install runtime deps (not committed)
-cd app && npm install
-
-# 2. repack the application archive
-node ../build/asar-tool.js pack /path/to/original/app.asar app ../dist/app.asar
-
-# 3. drop dist/app.asar into an Electron shell's resources/ directory
+# Clone and run from source
+git clone https://github.com/harishpixous-commits/Harishcode.git
+cd Harishcode
+bun install
+bun run dev
 ```
 
-The `build/` scripts are the exact ones used to produce the shipped build, so a
-rebuild is reproducible from this repository plus a base Electron shell.
+`Harish Code` requires [Bun](https://bun.sh) `1.4.4` or newer. Once a release is published, the CLI installs globally as:
 
-## Branding
+```bash
+npm i -g @harishcode/cli@latest   # or bun / pnpm / yarn
+```
 
-All artwork is derived from the HC monogram. See [`docs/BRANDING.md`](docs/BRANDING.md)
-for the colour values, type rules and the full asset list.
+The install script places binaries in `$HOME/.harishcode/bin`.
 
-| Asset | Size | Use |
-| --- | --- | --- |
-| `logo-lockup.png` | 1164×200 | README / splash lockup |
-| `logo-tile-1024.png` | 1024² | Store / app tile |
-| `logo-mark-256.png` | 256² | App icon base |
-| `logo-mark-32.png` | 32² | Small tray/taskbar |
-| `favicon-512.png` | 512² | Window / web favicon |
+### Desktop App
 
-In-app marks are drawn inline as SVG in `currentColor` so they follow the
-light/dark theme automatically.
+The desktop shell lives in [`packages/desktop`](packages/desktop) and wraps the same core in a native window.
 
-## License
+```bash
+bun run dev:desktop
+```
 
-MIT — see [LICENSE](LICENSE).
+Build installers with `bun run --cwd packages/desktop build`.
 
-Third-party components bundled with the desktop runtime carry their own
-licences; see [NOTICE](NOTICE) for the attribution list. Every bundled library
-retains its original licence and copyright notice, as those licences require.
+| Platform              | Artifact                            |
+| --------------------- | ----------------------------------- |
+| Windows               | `.exe` (NSIS)                       |
+| macOS (Apple Silicon) | `harishcode-desktop-mac-arm64.dmg`  |
+| macOS (Intel)         | `harishcode-desktop-mac-x64.dmg`    |
+| Linux                 | `.deb`, `.rpm`, `.AppImage`         |
+
+### Agents
+
+Two agents ship in the box; switch between them with `Tab`.
+
+- **build** — default, full-access agent for development work.
+- **plan** — read-only agent for analysis and code exploration.
+  - Denies file edits by default.
+  - Asks permission before running shell commands.
+  - Ideal for exploring unfamiliar codebases or planning a change.
+
+A **general** subagent handles complex searches and multi-step tasks. It runs internally and is invoked with `@general` in a message.
+
+### Repository layout
+
+This is a Bun workspace monorepo. The pieces that matter most:
+
+| Path                   | Package                | What it does                                              |
+| ---------------------- | ---------------------- | --------------------------------------------------------- |
+| `packages/cli`         | `@harishcode/cli`      | Entry point, argument parsing, install/update flows        |
+| `packages/tui`         | `@harishcode/tui`      | Terminal interface                                        |
+| `packages/desktop`     | `@harishcode/desktop`  | Electron desktop shell                                    |
+| `packages/core`        | `@harishcode/core`     | Sessions, tools, permissions, providers, storage           |
+| `packages/ai`          | `@harishcode/ai`       | Provider adapters and streaming                            |
+| `packages/server`      | `@harishcode/server`   | Local HTTP API used by every client                        |
+| `packages/protocol`    | `@harishcode/protocol` | Shared request/response schemas                            |
+| `packages/ui`          | `@harishcode/ui`       | Shared components, icons, theme primitives                 |
+| `packages/sdk`         | `@harishcode/sdk`      | Generated client for the local server                      |
+
+### Development
+
+```bash
+bun install            # install the workspace
+bun run dev            # run the CLI from source
+bun run dev:desktop    # run the desktop app
+bun run typecheck      # typecheck every package
+bun run check          # lint + typecheck
+```
+
+Each package exposes its own `test` script; run one workspace at a time:
+
+```bash
+bun run --cwd packages/core test
+```
+
+See [`AGENTS.md`](AGENTS.md) for the conventions this codebase follows.
+
+### Documentation
+
+Configuration, provider setup and the plugin API are documented in [`packages/core/src/plugin/skill/`](packages/core/src/plugin/skill) and inline with the code.
+
+### Contributing
+
+Patches are welcome. Please read [`CONTRIBUTING.md`](CONTRIBUTING.md) before opening a pull request, and run `bun run check` locally first.
+
+### Security
+
+Report vulnerabilities privately — see [`SECURITY.md`](SECURITY.md).
+
+### License
+
+[MIT](LICENSE) © Harish Innovations. Built and maintained by [@harishpixous-commits](https://github.com/harishpixous-commits).
+
+---
+
+<p align="center">
+  <a href="https://github.com/harishpixous-commits">GitHub</a> ·
+  <a href="https://github.com/harishpixous-commits/Harishcode/issues">Issues</a> ·
+  <a href="https://github.com/harishpixous-commits/Harishcode/discussions">Discussions</a>
+</p>

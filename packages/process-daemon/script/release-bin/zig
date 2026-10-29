@@ -1,0 +1,13 @@
+#!/bin/sh
+set -eu
+
+if [ -z "${HARISHCODE_REAL_ZIG:-}" ]; then
+  echo "HARISHCODE_REAL_ZIG is required" >&2
+  exit 1
+fi
+
+if [ "${1:-}" = "build" ]; then
+  exec "$HARISHCODE_REAL_ZIG" "$@" -Dcpu=baseline
+fi
+
+exec "$HARISHCODE_REAL_ZIG" "$@"

@@ -1,2 +1,0 @@
-import{Lh as e,lg as t,mg as n,zh as r}from"./main-Cs-Uxtxi.js";var i=r(`<div>`);function a(r){let[a,o]=n(r,[`class`,`classList`]);return(()=>{var n=i();return e(n,t(o,{role:`separator`,"aria-orientation":`horizontal`,"data-component":`divider-v2`,get classList(){return{...a.classList,[a.class??``]:!!a.class}}}),!1,!1),n})()}export{a as t};
-//# sourceMappingURL=divider-CIizgftS.js.map

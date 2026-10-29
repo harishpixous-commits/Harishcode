@@ -1,3 +1,0 @@
-import{o as e}from"./IUDOOOVD-B4C_vFVm.js";var t=/<(?!br\s*\/?>)/gi,n=/:fa-/g,r=/<br\s*\/?>|ﬂ°°?\w+¶ß|&#?\w+;|[\ud800-\udbff][\udc00-\udfff]|[\s\S]/gi;function i(r,i,a,o,s=0){let c=r;return c!==void 0&&(c.includes(`<`)&&(c=c.replace(t,`&lt;`)),c.includes(`:fa-`)&&(c=c.replace(n,`&colon;fa-`))),e(c,!1,i,a,o,s)}function a(e,t,n,a,o=0){let s=i(e,t,n,a,o);if(e===void 0||s.width<=a)return s;let c=``,l=0;for(let i of e.match(r)??[]){if(i.trim()===``||i.length>2&&i[0]===`<`)l=0;else{let e=t.width(i.length>2?`x`:i,n,o);l>0&&l+e>a&&(c+=`
-`,l=0),l+=e}c+=i}return i(c,t,n,a,o)}export{i as n,a as t};
-//# sourceMappingURL=BBBUIAME-yWZ_XWER.js.map
