@@ -66,6 +66,14 @@ export interface Snapshot {
 
 export class Service extends Context.Service<Service, Interface>()("@harishcode/Tool") {}
 
+const saveOrigin = (url: string) => {
+  try {
+    return `${new URL(url).origin}/*`
+  } catch {
+    return url
+  }
+}
+
 const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
@@ -282,7 +290,11 @@ const layer = Layer.effect(
                     permission.assert({
                       action: "webfetch",
                       resources: [url],
-                      save: ["*"],
+                      // Narrower than the first-party webfetch tool's save ["*"]: model-written code can
+                      // fan out to arbitrary URLs, so an "always" reply persists only this origin
+                      // (Wildcard-match verified: explicit ports/userinfo fail closed into a re-ask).
+                      // A plain "once" reply covers this request only; redirect hops are checked per hop.
+                      save: [saveOrigin(url)],
                       metadata: { url, method },
                       sessionID: context.sessionID,
                       agent: context.agent,

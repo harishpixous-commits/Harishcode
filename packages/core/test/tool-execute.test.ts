@@ -4,6 +4,7 @@ import type { CodeModeWeb } from "@harishcode/core/codemode/web"
 import { AppNodeBuilder } from "@harishcode/core/effect/app-node-builder"
 import { Image } from "@harishcode/core/image"
 import { Permission } from "@harishcode/core/permission"
+import { Wildcard } from "@harishcode/core/util/wildcard"
 import type { Context as ToolContext } from "@harishcode/schema/tool"
 import { imagePassthrough } from "./lib/image"
 import { permissionLayer } from "./lib/permission"
@@ -14,7 +15,7 @@ import { Agent } from "@harishcode/schema/agent"
 import { Session } from "@harishcode/schema/session"
 import { SessionMessage } from "@harishcode/schema/session-message"
 import type { Info } from "@harishcode/schema/tool"
-import { Effect, Schema } from "effect"
+import { Fiber, Effect, Schema } from "effect"
 
 const context = {
   sessionID: Session.ID.make("ses_execute"),
@@ -222,15 +223,23 @@ test("executions share the prepared runtime of an inventory while keeping per-ca
 const withGuard = (guard: (execution: ToolContext) => CodeModeWeb.GuardService) =>
   CodeModeTool.create({ tools: new Map() }, (_, tool, input, context) => execute(tool, input, context), guard)
 
-const stubNetwork = (handler: (url: string, calls: string[]) => Response) => {
-  const calls: string[] = []
+type NetCall = { url: string; init?: RequestInit }
+
+const stubNetwork = (handler: (url: string, calls: NetCall[]) => Response | Promise<Response>) => {
+  const calls: NetCall[] = []
   const original = globalThis.fetch
-  globalThis.fetch = (async (input: unknown) => {
+  globalThis.fetch = (async (input: unknown, init?: RequestInit) => {
     const url = String(input)
-    calls.push(url)
+    calls.push({ url, init })
     return handler(url, calls)
   }) as typeof fetch
-  return { calls, restore: () => void (globalThis.fetch = original) }
+  return {
+    get calls() {
+      return calls.map((c) => c.url)
+    },
+    entries: calls,
+    restore: () => void (globalThis.fetch = original),
+  }
 }
 
 test("CodeMode fetch requires guard approval before any network request", async () => {
@@ -357,11 +366,159 @@ test("registry mediates CodeMode fetch through the webfetch permission action", 
     expect(asked[0]).toMatchObject({
       action: "webfetch",
       resources: ["https://example.com/registry"],
-      save: ["*"],
+      save: ["https://example.com/*"],
       sessionID: context.sessionID,
       source: { type: "tool", messageID: toolIdentity.messageID, id: context.id },
     })
   } finally {
     globalThis.fetch = original
   }
+})
+
+test("cross-origin redirect strips credential headers case-insensitively; same-origin keeps them", async () => {
+  const net = stubNetwork((url) =>
+    url === "https://example.com/start"
+      ? new Response(null, { status: 302, headers: { location: "https://other.example/final" } })
+      : new Response("done"),
+  )
+  try {
+    const result = await Effect.runPromise(
+      withGuard(() => ({ approve: () => Effect.void, check: () => Effect.void })).execute(
+        {
+          code: 'return await fetch("https://example.com/start", { headers: { Authorization: "Bearer t", COOKIE: "s=1", "X-Custom": "keep" } }).then((r) => r.text())',
+        },
+        context,
+      ),
+    )
+    expect(result.output.error).toBeUndefined()
+    const forwarded = net.entries[1]?.init?.headers as Array<[string, string]>
+    expect(forwarded).toEqual([["X-Custom", "keep"]])
+  } finally {
+    net.restore()
+  }
+
+  const same = stubNetwork((url) =>
+    url === "https://example.com/start"
+      ? new Response(null, { status: 302, headers: { location: "/next" } })
+      : new Response("done"),
+  )
+  try {
+    const result = await Effect.runPromise(
+      withGuard(() => ({ approve: () => Effect.void, check: () => Effect.void })).execute(
+        {
+          code: 'return await fetch("https://example.com/start", { headers: { authorization: "Bearer t" } }).then((r) => r.text())',
+        },
+        context,
+      ),
+    )
+    expect(result.output.error).toBeUndefined()
+    expect(same.entries[1]?.init?.headers).toEqual({ authorization: "Bearer t" })
+  } finally {
+    same.restore()
+  }
+})
+
+test("307 replay keeps method and body same-origin but refuses cross-origin body replay", async () => {
+  const same = stubNetwork((url) =>
+    url === "https://example.com/upload"
+      ? new Response(null, { status: 307, headers: { location: "/upload2" } })
+      : new Response("ok"),
+  )
+  try {
+    const result = await Effect.runPromise(
+      withGuard(() => ({ approve: () => Effect.void, check: () => Effect.void })).execute(
+        {
+          code: 'return await fetch("https://example.com/upload", { method: "POST", body: "payload" }).then((r) => r.text())',
+        },
+        context,
+      ),
+    )
+    expect(result.output.error).toBeUndefined()
+    expect(same.entries[1]?.init?.method).toBe("POST")
+    expect(same.entries[1]?.init?.body).toBe("payload")
+  } finally {
+    same.restore()
+  }
+
+  const cross = stubNetwork(() => new Response(null, { status: 307, headers: { location: "https://evil.example/x" } }))
+  try {
+    const result = await Effect.runPromise(
+      withGuard(() => ({ approve: () => Effect.void, check: () => Effect.void })).execute(
+        { code: 'return await fetch("https://example.com/upload", { method: "POST", body: "secret" })' },
+        context,
+      ),
+    )
+    expect(result.output.error).toBe(true)
+    expect(result.output.output).toContain("Refusing to replay a request body across origins")
+    expect(cross.calls).toEqual(["https://example.com/upload"])
+  } finally {
+    cross.restore()
+  }
+})
+
+test("cloud metadata endpoints are blocked before any guard approval", async () => {
+  const net = stubNetwork(() => new Response("should not reach the network"))
+  const asked: string[] = []
+  try {
+    const result = await Effect.runPromise(
+      withGuard(() => ({
+        approve: (url) => {
+          asked.push(url)
+          return Effect.void
+        },
+        check: () => Effect.void,
+      })).execute({ code: 'return await fetch("http://169.254.169.254/latest/meta-data/")' }, context),
+    )
+    expect(result.output.error).toBe(true)
+    expect(result.output.output).toContain("not permitted")
+    expect(net.calls).toEqual([])
+    expect(asked).toEqual([])
+  } finally {
+    net.restore()
+  }
+})
+
+test("no egress while approval is pending; interruption aborts an in-flight hop", async () => {
+  const net = stubNetwork(() => new Promise<Response>(() => {}))
+  try {
+    const pending = Effect.runFork(
+      withGuard(() => ({ approve: () => Effect.never, check: () => Effect.void })).execute(
+        { code: 'return await fetch("https://example.com/data")' },
+        context,
+      ),
+    )
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    expect(net.calls).toEqual([])
+    await Effect.runPromise(Fiber.interrupt(pending))
+    expect(net.calls).toEqual([])
+
+    const flight = Effect.runFork(
+      withGuard(() => ({ approve: () => Effect.void, check: () => Effect.void })).execute(
+        { code: 'return await fetch("https://example.com/slow")' },
+        context,
+      ),
+    )
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    expect(net.calls).toEqual(["https://example.com/slow"])
+    await Effect.runPromise(Fiber.interrupt(flight))
+    const signal = net.entries[0]?.init?.signal
+    expect(signal?.aborted).toBe(true)
+  } finally {
+    net.restore()
+  }
+})
+
+test("origin-scoped save pattern matches same origin and fails closed on port, userinfo and case variants", () => {
+  const pattern = "https://example.com/*"
+  expect(Wildcard.match("https://example.com/", pattern)).toBe(true)
+  expect(Wildcard.match("https://example.com/path?q=1", pattern)).toBe(true)
+  expect(Wildcard.match("https://example.com:8443/path", pattern)).toBe(false)
+  expect(Wildcard.match("https://user@example.com/path", pattern)).toBe(false)
+  expect(Wildcard.match("https://example.com.evil.com/", pattern)).toBe(false)
+  if (process.platform === "win32") {
+    expect(Wildcard.match("HTTPS://EXAMPLE.COM/path", pattern)).toBe(true)
+  } else {
+    expect(Wildcard.match("HTTPS://EXAMPLE.COM/path", pattern)).toBe(false)
+  }
+  expect(Wildcard.match("https://example.com:443/", pattern)).toBe(false)
 })
