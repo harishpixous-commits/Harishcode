@@ -1,8 +1,12 @@
 /**
  * Full-suite runner with discovery parity: the recursive test inventory is authoritative and
- * the collected suite must cover it exactly, so a partial file list can never pass as the full
- * suite. Fails closed on missing, duplicate, or empty discovery. `--self-test` exercises the
- * parity gate against tampered counts and must print OK before a real result is trusted.
+ * the executed suite must cover it exactly, so a partial file list can never pass as the full
+ * suite. Compares executed file IDENTITIES (bun's per-file output headers) against the
+ * inventory and fails closed with named missing, extra, or duplicate files; count agreement
+ * alone is never treated as identity proof. If bun ever stops printing per-file headers the
+ * runner falls back to count-scope only and says so - that is not an identity gate.
+ * `--self-test` exercises the gate against tampered identity sets and counts and must print
+ * OK before a real result is trusted.
  */
 import fs from "fs/promises"
 import path from "path"
@@ -21,7 +25,29 @@ const inventory = async (directory: string): Promise<string[]> => {
   return files
 }
 
-const parityError = (expected: number, observed: number) => {
+const normalize = (file: string) => file.replace(/\\/g, "/").replace(/^\.\//, "")
+
+const identityError = (expected: readonly string[], collected: readonly string[]) => {
+  if (expected.length === 0) return "empty recursive test inventory"
+  const want = new Set(expected)
+  const seen = new Set<string>()
+  const duplicates = new Set<string>()
+  const extra = new Set<string>()
+  for (const file of collected) {
+    if (seen.has(file)) duplicates.add(file)
+    seen.add(file)
+    if (!want.has(file)) extra.add(file)
+  }
+  const missing = expected.filter((file) => !seen.has(file))
+  if (collected.length === 0) return "bun executed 0 test files"
+  const problems: string[] = []
+  if (missing.length > 0) problems.push(`missing: ${missing.join(", ")}`)
+  if (extra.size > 0) problems.push(`extra: ${[...extra].join(", ")}`)
+  if (duplicates.size > 0) problems.push(`duplicates: ${[...duplicates].join(", ")}`)
+  return problems.length > 0 ? problems.join("; ") : undefined
+}
+
+const countError = (expected: number, observed: number) => {
   if (expected === 0) return "empty recursive test inventory"
   if (observed === 0) return "bun collected 0 test files"
   if (observed !== expected) {
@@ -30,34 +56,48 @@ const parityError = (expected: number, observed: number) => {
   return undefined
 }
 
-const discovered = (await inventory(path.join(root, "test"))).sort()
+const relative = (file: string) => normalize(path.relative(root, file))
+
+const discovered = (await inventory(path.join(root, "test"))).map(relative).sort()
 if (new Set(discovered).size !== discovered.length) {
   console.error(`discovery parity FAILED: duplicate entries in the recursive inventory (${discovered.length})`)
   process.exit(1)
 }
+if (discovered.length === 0) {
+  console.error("discovery parity FAILED: empty recursive test inventory")
+  process.exit(1)
+}
 
 if (process.argv.includes("--self-test")) {
-  const tampered: Array<[number, number]> = [
+  const swapped = discovered.map((file, index) => (index === 0 ? "test/__parity_substitution__.test.ts" : file))
+  const tamperedIdentities: Array<[readonly string[], readonly string[]]> = [
+    [discovered, []],
+    [discovered, discovered.slice(1)],
+    [discovered, [...discovered, "test/__parity_extra__.test.ts"]],
+    [discovered, [...discovered, discovered[0]!]],
+    [discovered, swapped],
+    [[], []],
+  ]
+  const tamperedCounts: Array<[number, number]> = [
     [discovered.length, 0],
     [discovered.length, discovered.length - 1],
     [discovered.length, discovered.length + 1],
-    [0, 0],
   ]
-  const missed = tampered.filter(([expected, observed]) => parityError(expected, observed) === undefined)
-  if (missed.length > 0) {
-    console.error(`discovery parity self-test FAILED: ${missed.length} tampered count(s) passed the gate`)
+  const missed =
+    tamperedIdentities.filter(([expected, collected]) => identityError(expected, collected) === undefined).length +
+    tamperedCounts.filter(([expected, observed]) => countError(expected, observed) === undefined).length
+  if (missed > 0) {
+    console.error(`discovery parity self-test FAILED: ${missed} tampered input(s) passed the gate`)
+    process.exit(1)
+  }
+  if (identityError(discovered, discovered) !== undefined || countError(discovered.length, discovered.length) !== undefined) {
+    console.error("discovery parity self-test FAILED: the untampered inventory was rejected")
     process.exit(1)
   }
   console.log(
-    `discovery parity self-test OK: ${tampered.length} tampered counts rejected (${discovered.length} files inventoried)`,
+    `discovery parity self-test OK: ${tamperedIdentities.length} tampered identity sets and ${tamperedCounts.length} tampered counts rejected, clean inventory accepted (${discovered.length} files)`,
   )
   process.exit(0)
-}
-
-const inventoryError = parityError(discovered.length, discovered.length)
-if (inventoryError) {
-  console.error(`discovery parity FAILED: ${inventoryError}`)
-  process.exit(1)
 }
 
 await using directory = await tmpdir("oc-full-")
@@ -94,6 +134,9 @@ const environment = {
 
 const child = Bun.spawn({
   cmd: [process.execPath, "test", "--timeout=30000"],
+  // The inventory is rooted at this package; the spawned suite must run from the same root or
+  // the two sides of the comparison measure different trees.
+  cwd: root,
   env: environment,
   stdin: "inherit",
   stdout: "pipe",
@@ -113,16 +156,29 @@ process.off("SIGTERM", terminate)
 process.stdout.write(out)
 process.stderr.write(err)
 
-const summary = `${out}\n${err}`.match(/Ran \d+ tests? across (\d+) files?/)
-if (!summary) {
-  console.error("discovery parity FAILED: bun summary line not found in suite output")
-  process.exit(1)
+const output = `${out}\n${err}`
+const collected = [...output.matchAll(/^(.+\.test\.ts):$/gm)].map((match) => normalize(match[1]!))
+if (collected.length === 0) {
+  const summary = output.match(/Ran \d+ tests? across (\d+) files?/)
+  if (!summary) {
+    console.error("discovery parity FAILED: neither per-file headers nor the bun summary were found in suite output")
+    process.exit(1)
+  }
+  const fallback = countError(discovered.length, Number(summary[1]))
+  if (fallback) {
+    console.error(`discovery parity FAILED: ${fallback}`)
+    process.exit(1)
+  }
+  console.warn(
+    `discovery parity COUNT-SCOPE ONLY: bun printed no per-file headers, so identity is unverified (${summary[1]} collected = ${discovered.length} inventoried)`,
+  )
+  process.exitCode = code
+} else {
+  const failure = identityError(discovered, collected)
+  if (failure) {
+    console.error(`discovery parity FAILED: ${failure}`)
+    process.exit(1)
+  }
+  console.log(`discovery parity OK: ${collected.length} executed file identities = ${discovered.length} inventoried`)
+  process.exitCode = code
 }
-const collected = Number(summary[1])
-const collectedError = parityError(discovered.length, collected)
-if (collectedError) {
-  console.error(`discovery parity FAILED: ${collectedError}`)
-  process.exit(1)
-}
-console.log(`discovery parity OK: ${collected} collected = ${discovered.length} inventoried`)
-process.exitCode = code
