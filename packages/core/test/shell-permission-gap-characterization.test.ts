@@ -19,7 +19,7 @@
 import { describe, expect, test } from "bun:test"
 import { Effect } from "effect"
 import { ShellParse } from "@harishcode/core/shell/parse"
-import { shellParserWasm } from "../src/shell/parser-wasm.workerd"
+import { shellParserWasm } from "../src/shell/parser-wasm.bun"
 
 const scan = (command: string, shell: string, mode: "portable" | "legacy") =>
   Effect.runPromise(ShellParse.scan(command, shell, "/tmp", mode === "portable" ? { portable: true } : { wasm: shellParserWasm }))
