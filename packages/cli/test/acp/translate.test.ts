@@ -14,6 +14,7 @@ import {
   ephemeralEvent,
   failed,
   reasoningDelta,
+  permissionAsked,
   stepEnded,
   succeeded,
   textDelta,
@@ -648,3 +649,36 @@ function run(events: ReadonlyArray<HarishCodeEventEncoded>, context = ctx) {
 function updates(outputs: ReadonlyArray<ACPTranslate.Output>) {
   return outputs.flatMap((output) => (output._tag === "SessionUpdate" ? [output.update] : []))
 }
+
+test("permission settlement from another session cannot settle this turn's pending request", () => {
+  const pending = run(live(permissionAsked(root, "per_scoped")))
+  const unrelated = ACPTranslate.fold(
+    pending.state,
+    decodeEvent({
+      ...ephemeralEvent("permission.replied", { sessionID: "ses_unrelated", requestID: "per_scoped", reply: "once" }),
+      id: "evt_unrelated",
+    }),
+    ctx,
+  )
+  expect(unrelated.outputs).toEqual([])
+  expect(unrelated.state.asks.has("per_scoped")).toBe(true)
+  const matched = ACPTranslate.fold(
+    unrelated.state,
+    decodeEvent({
+      ...ephemeralEvent("permission.replied", { sessionID: root, requestID: "per_scoped", reply: "reject" }),
+      id: "evt_matched",
+    }),
+    ctx,
+  )
+  expect(matched.outputs).toEqual([{ _tag: "AskSettled", id: "per_scoped" }])
+  expect(matched.state.asks.has("per_scoped")).toBe(false)
+  const replay = ACPTranslate.fold(
+    matched.state,
+    decodeEvent({
+      ...ephemeralEvent("permission.replied", { sessionID: root, requestID: "per_scoped", reply: "once" }),
+      id: "evt_replay",
+    }),
+    ctx,
+  )
+  expect(replay.outputs).toEqual([])
+})

@@ -1,5 +1,5 @@
 import { net, protocol } from "electron"
-import path from "node:path"
+import { resolveRendererPath } from "./protocol-path"
 import { pathToFileURL } from "node:url"
 import { documentPolicyHeader, jsCallStacksDocumentPolicy } from "./headers"
 import { rendererHost, rendererProtocol } from "./scheme"
@@ -75,11 +75,10 @@ async function serve(request: Request, rendererRoot: string) {
     return new Response("Not found", { status: 404 })
   }
 
-  const file = path.resolve(rendererRoot, `.${decodeURIComponent(url.pathname)}`)
-  const rel = path.relative(rendererRoot, file)
+  const file = resolveRendererPath(rendererRoot, url.pathname)
 
-  if (rel.startsWith("..") || path.isAbsolute(rel)) {
-    report("warning", "rejected path", { url: request.url, file })
+  if (file === undefined) {
+    report("warning", "rejected path", { url: request.url })
 
     return new Response("Not found", { status: 404 })
   }

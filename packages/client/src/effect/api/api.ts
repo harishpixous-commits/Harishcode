@@ -1945,6 +1945,7 @@ export type PermissionReplyInput = {
   readonly requestID: Permission.ID
   readonly decision: Permission.Reply
   readonly message?: string | undefined
+  readonly reviewer?: string | undefined
 }
 export type PermissionReplyOutput = void
 export type PermissionReplyOperation<E = never> = (
@@ -2143,6 +2144,7 @@ export type EventSubscribeInput = {
         | `${"rpc."}${string}`
       >
     | undefined
+  readonly review?: "true" | undefined
 }
 export type EventSubscribeOutput = HarishCodeEvent
 export type EventSubscribeOperation<E = never> = (input?: EventSubscribeInput) => Stream.Stream<EventSubscribeOutput, E>

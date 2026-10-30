@@ -1,12 +1,13 @@
 export * as SessionSystemPrompt from "./system-prompt.js"
 
 import PROMPT from "./runner/prompt/system.txt"
+import QUALITY from "./runner/prompt/quality.txt"
 
 export function make(tools: string[]) {
   return render(PROMPT, tools)
 }
 
-export function render(prompt: string, tools: string[]) {
+export function render(prompt: string, tools: string[], includeQuality = true) {
   const instructions: string[] = []
   if (tools.includes("shell")) {
     instructions.push(
@@ -24,5 +25,7 @@ export function render(prompt: string, tools: string[]) {
       "- Use the edit tool for targeted changes to existing text files. It replaces the exact text in `oldString` with `newString`, and the values must differ. By default, `oldString` must occur exactly once. If it occurs multiple times, include more surrounding context to make it unique or set `replaceAll` to true to replace every occurrence.",
     )
   }
-  return prompt.replace("${HARISHCODE_TOOL_GUIDANCE}", instructions.join("\n"))
+  const rendered = prompt.replace("${HARISHCODE_TOOL_GUIDANCE}", instructions.join("\n"))
+  // Model-specific templates replace the baseline; keep the same quality contract across them.
+  return !includeQuality || rendered.includes(QUALITY.trim()) ? rendered : `${rendered.trimEnd()}\n\n${QUALITY.trim()}`
 }

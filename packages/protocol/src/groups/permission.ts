@@ -8,6 +8,7 @@ import { Context, Schema } from "effect"
 import { HttpApiEndpoint, HttpApiGroup, HttpApiMiddleware, HttpApiSchema, OpenApi } from "effect/http-api"
 import {
   ConflictError,
+  ForbiddenError,
   LocationNotFoundError,
   PermissionNotFoundError,
   PermissionSavedNotFoundError,
@@ -144,9 +145,13 @@ export const makePermissionGroup = <
         payload: Schema.Struct({
           decision: Permission.Reply,
           message: Schema.String.pipe(Schema.optional),
+          // Reviewer capability token from the replying connection's server.connected event.
+          // Required for allow decisions ("once"/"always") on review-guarded sessions;
+          // rejects never require it, so a missing or stale token can never wedge a decline.
+          reviewer: Schema.String.pipe(Schema.optional),
         }),
         success: HttpApiSchema.NoContent,
-        error: [SessionNotFoundError, PermissionNotFoundError],
+        error: [SessionNotFoundError, PermissionNotFoundError, ForbiddenError],
       })
         .middleware(sessionLocationMiddleware)
         .annotateMerge(

@@ -69,7 +69,7 @@ Build installers with `bun run --cwd packages/desktop build`.
 Two agents ship in the box; switch between them with `Tab`.
 
 - **build** — default, full-access agent for development work.
-- **plan** — read-only agent for analysis and code exploration.
+- **plan** — read-only agent for analysis and code exploration. Shell commands require approval because command parsing is not a read-only sandbox. Approving a shell command can allow it to change files. The Explore subagent uses dedicated read/search tools and cannot run shell commands. Plan does not delegate to subagents, whose agent defaults may be broader. Explicit session/config/plugin policy can override defaults; these modes are not an OS sandbox.
   - Denies file edits by default.
   - Asks permission before running shell commands.
   - Ideal for exploring unfamiliar codebases or planning a change.
@@ -133,3 +133,9 @@ Report vulnerabilities privately — see [`SECURITY.md`](SECURITY.md).
   <a href="https://github.com/harishpixous-commits/Harishcode/issues">Issues</a> ·
   <a href="https://github.com/harishpixous-commits/Harishcode/discussions">Discussions</a>
 </p>
+
+### Native PTY dependency identity
+
+The existing PTY integration uses the upstream `@opencode-ai/pty@0.3.1` package and its original `opencode-pty` asset filenames. These are third-party package/API identities, not Harish Code branding. Renaming them to unpublished Harish Code packages breaks installation and packaging. Harish Code application names, runtime overrides, and packaged destination names stay unchanged. The separate process-daemon source is not a substitute for the pinned published binary, and resolving an asset does not establish native runtime compatibility.
+
+The same identity rule applies to `@brendonovich/vite-plugin-opencode` and its published `@opencode-ai/{client,schema,protocol}` dependencies, and the pinned `anomalyco/ghostty-web` source commit. Their original names and exact pinned versions/commit are preserved; local Harish Code workspace packages are not renamed.

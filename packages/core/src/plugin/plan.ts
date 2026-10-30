@@ -36,6 +36,10 @@ export const Plugin = define({
         item.description = "Read-only agent for exploring the codebase and planning work before implementation."
         item.mode = "primary"
         item.permissions.push({ action: "question", resource: "*", effect: "allow" })
+        // Command parsing is not a read-only sandbox; require review for every shell command.
+        item.permissions.push({ action: "shell", resource: "*", effect: "ask" })
+        // Child agent defaults do not inherit this agent's restrictions.
+        item.permissions.push({ action: "subagent", resource: "*", effect: "deny" })
         item.permissions.push({ action: "edit", resource: "*", effect: "deny" })
         item.permissions.push({ action: "edit", resource: path.join(directory, "*"), effect: "allow" })
       })

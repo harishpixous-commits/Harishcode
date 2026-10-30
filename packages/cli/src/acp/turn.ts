@@ -28,6 +28,7 @@ import { ACPPermission } from "./permission"
 import { ACPPrompt } from "./prompt"
 import type { ACPSessions, Attached } from "./sessions"
 import { ACPTranslate } from "./translate"
+import { requireReviewKey } from "@harishcode/schema/session-review"
 
 export interface Interface {
   readonly prompt: (input: PromptRequest, signal: AbortSignal) => Effect.Effect<PromptResponse, ACPError.Failure>
@@ -39,6 +40,27 @@ export interface Interface {
 /** Core acknowledges an interrupt before its cleanup settles, and its shell tool waits 3s before SIGKILL. */
 export const CancelDrainTimeout = Context.Reference<Duration.Input>("@harishcode/cli/acp/Turn/CancelDrainTimeout", {
   defaultValue: () => "5 seconds",
+})
+
+/** Explicit opt-in for ACP clients that cannot present user approval (for example Canvas). */
+export const PermissionReview = Context.Reference<"client" | "harishcode">(
+  "@harishcode/cli/acp/Turn/PermissionReview",
+  {
+    defaultValue: () => "client",
+  },
+)
+
+/** Bound unattended external review; not a UI-presence or authentication check. */
+export const PermissionReviewTimeout = Context.Reference<Duration.Input>(
+  "@harishcode/cli/acp/Turn/PermissionReviewTimeout",
+  {
+    defaultValue: () => "60 seconds",
+  },
+)
+
+/** Must be set by an owner-controlled connection, never from ACP request metadata. */
+export const ReviewWorkspace = Context.Reference<string | undefined>("@harishcode/cli/acp/Turn/ReviewWorkspace", {
+  defaultValue: () => undefined,
 })
 
 type Subscription = {
@@ -65,6 +87,9 @@ export const make = Effect.fnUntraced(function* (input: {
 }) {
   const scope = yield* Effect.scope
   const drainTimeout = yield* CancelDrainTimeout
+  const permissionReview = yield* PermissionReview
+  const permissionReviewTimeout = yield* PermissionReviewTimeout
+  const reviewWorkspace = yield* ReviewWorkspace
   const turns = yield* FiberMap.make<string, PromptResponse, ACPError.Failure>()
 
   const open = Effect.fnUntraced(function* (ctx: ACPTranslate.TurnContext, state: Ref.Ref<ACPTranslate.TurnState>) {
@@ -146,9 +171,7 @@ export const make = Effect.fnUntraced(function* (input: {
           return yield* input.connection.extNotification(ACPChild.UpdateMethod, { ...output.update, update })
         }).pipe(
           Effect.catchCause((cause) =>
-            Cause.hasInterruptsOnly(cause)
-              ? Effect.void
-              : Effect.logWarning("ACP child session update failed", cause),
+            Cause.hasInterruptsOnly(cause) ? Effect.void : Effect.logWarning("ACP child session update failed", cause),
           ),
         )
       case "PermissionAsk": {
@@ -162,7 +185,14 @@ export const make = Effect.fnUntraced(function* (input: {
           tool: output.tool,
           child: output.child,
         }
-        return queueAsk(turn, output.event.data.id, ACPPermission.ask(permission), "reject", (decision) =>
+        // External review never asks the ACP client: some clients automatically allow.
+        // The shared HC server's permission.replied event settles this queue entry.
+        // Timeout/cancel still rejects the real pending permission on that server.
+        const ask =
+          permissionReview === "harishcode"
+            ? Effect.sleep(permissionReviewTimeout).pipe(Effect.as("reject" as const))
+            : ACPPermission.ask(permission)
+        return queueAsk(turn, output.event.data.id, ask, "reject", (decision) =>
           ACPPermission.respond(permission, decision),
         )
       }
@@ -351,6 +381,15 @@ export const make = Effect.fnUntraced(function* (input: {
   // Forked uninterruptible: interruption lands only in `execute` and the last check in `settle`, so a response follows.
   const run = Effect.fn("cli.acp.turn.run")(function* (params: PromptRequest) {
     const attached = yield* input.sessions.require(params.sessionId)
+    if (permissionReview === "harishcode") {
+      const current = yield* input.client.session.get({ sessionID: attached.id }).pipe(Effect.catch(ACPClient.classify))
+      if (
+        !reviewWorkspace ||
+        current.location.directory !== reviewWorkspace ||
+        current.metadata?.[requireReviewKey] !== true
+      )
+        return yield* new ACPError.InvalidRequestError({ message: "Guarded session or workspace binding changed" })
+    }
     const prompt = yield* ACPPrompt.prepare(yield* input.catalog.get(attached.cwd), params.prompt)
     const capabilities = yield* Ref.get(input.capabilities)
     const state = yield* Ref.make(ACPTranslate.initial)

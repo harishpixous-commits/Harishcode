@@ -92,8 +92,13 @@ function make(
           if ((yield* ctx.agent.get({ agentID: event.agent })).data.system) return
           const system = event.system[0]
           if (!system) return
-          const rendered = SessionSystemPrompt.render(template, Object.keys(event.tools))
-          const text = mode === "append" ? `${system.text}\n\n${rendered}` : rendered
+          const rendered = SessionSystemPrompt.render(template, Object.keys(event.tools), mode !== "append")
+          const text =
+            mode === "append" && !system.text.endsWith(rendered)
+              ? `${system.text}\n\n${rendered}`
+              : mode === "append"
+                ? system.text
+                : rendered
           event.system[0] = { ...system, text }
         }).pipe(Effect.catch(() => Effect.void))
       yield* ctx.session.hook("context", hook)

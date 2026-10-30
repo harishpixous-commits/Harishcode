@@ -30,6 +30,7 @@ import { ProjectHandler } from "./handlers/project"
 import { WorktreeHandler } from "./handlers/worktree"
 import { VcsHandler } from "./handlers/vcs"
 import { EventFeed } from "./event-feed"
+import { ReviewerPresence } from "./reviewer-presence"
 import { MigrationHandler } from "./handlers/migration"
 import { ConfigHandler } from "./handlers/config"
 
@@ -53,12 +54,13 @@ export const handlers = Layer.mergeAll(
   CredentialHandler,
   ProjectHandler,
   FormHandler,
-  PermissionHandler,
   FileSystemHandler,
   CommandHandler,
   SkillHandler,
   RpcHandler,
-  EventHandler.pipe(Layer.provide(EventFeed.layer)),
+  Layer.mergeAll(EventHandler.pipe(Layer.provide(EventFeed.layer)), PermissionHandler).pipe(
+    Layer.provide(ReviewerPresence.layer),
+  ),
   PtyHandler,
   PersistentPtyHandler,
   ShellHandler,

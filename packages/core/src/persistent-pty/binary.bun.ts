@@ -1,12 +1,13 @@
 import { createHash } from "node:crypto"
 import { chmod, lstat, mkdir, open, readFile, rename, rm } from "node:fs/promises"
 import path from "node:path"
-import asset from "./pty-binding.js"
 
 export const available = true
 
 export async function resolveBinary(bin: string) {
   if (process.env.HARISHCODE_PTY_BIN) return process.env.HARISHCODE_PTY_BIN
+  // Resolve the optional native asset only when PTY is used, not while loading unrelated services.
+  const { default: asset } = await import("./pty-binding.js")
   if (!asset) return "harishcode-pty"
   if (typeof asset === "string") return asset
   return install(bin, asset)

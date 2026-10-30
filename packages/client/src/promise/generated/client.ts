@@ -2051,9 +2051,9 @@ export function make(options: ClientOptions) {
           {
             method: "POST",
             path: `/api/session/${encodeURIComponent(input.sessionID)}/permission/${encodeURIComponent(input.requestID)}/reply`,
-            body: { decision: input["decision"], message: input["message"] },
+            body: { decision: input["decision"], message: input["message"], reviewer: input["reviewer"] },
             successStatus: 204,
-            declaredStatuses: [400, 401, 404],
+            declaredStatuses: [400, 401, 403, 404],
             empty: true,
           },
           requestOptions,
@@ -2147,7 +2147,7 @@ export function make(options: ClientOptions) {
           {
             method: "GET",
             path: `/api/event`,
-            query: { types: input?.["types"] },
+            query: { types: input?.["types"], review: input?.["review"] },
             successStatus: 200,
             declaredStatuses: [400, 401],
             empty: false,

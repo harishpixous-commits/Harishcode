@@ -66,11 +66,20 @@ export interface Snapshot {
 
 export class Service extends Context.Service<Service, Interface>()("@harishcode/Tool") {}
 
+const saveOrigin = (url: string) => {
+  try {
+    return `${new URL(url).origin}/*`
+  } catch {
+    return url
+  }
+}
+
 const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const hooks = yield* PluginHooks.Service
     const image = yield* Image.Service
+    const permission = yield* Permission.Service
 
     type NormalizedItem = Tool.Content | "decode" | "size"
     const normalizeImages = Effect.fnUntraced(function* (content: ReadonlyArray<Tool.Content>) {
@@ -268,10 +277,39 @@ const layer = Layer.effect(
           const cached = catalog?.data === data && catalog.names === names ? catalog : undefined
           const codeModeInventory = cached?.inventory ?? { tools: codeModeTools, namespaces: data.namespaces }
           const codeModeTool = codeModeEnabled
-            ? CodeModeTool.create(codeModeInventory, (name, tool, input, context) =>
-                beforeExecute(name, input, context).pipe(
-                  Effect.flatMap((event) => executeTool(tool, name, event.input, context)),
-                ),
+            ? CodeModeTool.create(
+                codeModeInventory,
+                (name, tool, input, context) =>
+                  beforeExecute(name, input, context).pipe(
+                    Effect.flatMap((event) => executeTool(tool, name, event.input, context)),
+                  ),
+                // CodeMode fetch egress uses the webfetch permission action: interactive approval for the
+                // initial URL, non-interactive checks for redirect targets. Captured like plugin tools do.
+                (context) => ({
+                  approve: (url, method) =>
+                    permission.assert({
+                      action: "webfetch",
+                      resources: [url],
+                      // Narrower than the first-party webfetch tool's save ["*"]: model-written code can
+                      // fan out to arbitrary URLs, so an "always" reply persists only this origin
+                      // (Wildcard-match verified: explicit ports/userinfo fail closed into a re-ask).
+                      // A plain "once" reply covers this request only; redirect hops are checked per hop.
+                      save: [saveOrigin(url)],
+                      metadata: { url, method },
+                      sessionID: context.sessionID,
+                      agent: context.agent,
+                      source: { type: "tool", messageID: context.messageID, id: context.id },
+                    }),
+                  check: (url) =>
+                    permission.assertNotDenied({
+                      action: "webfetch",
+                      resources: [url],
+                      metadata: { url },
+                      sessionID: context.sessionID,
+                      agent: context.agent,
+                      source: { type: "tool", messageID: context.messageID, id: context.id },
+                    }),
+                }),
               )
             : undefined
           const codeModeCatalog = !codeModeEnabled
@@ -362,5 +400,5 @@ function namespaceError(name: string) {
 export const node = makeLocationNode({
   service: Service,
   layer,
-  deps: [PluginHooks.node, Image.node],
+  deps: [PluginHooks.node, Image.node, Permission.node],
 })

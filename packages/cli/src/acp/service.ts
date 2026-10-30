@@ -43,7 +43,8 @@ import { ACPDirectories } from "./directories"
 import { ACPError } from "./error"
 import { ACPReplay } from "./replay"
 import type { ACPSessions, Attached, SupportedMcpServer } from "./sessions"
-import type { ACPTurn } from "./turn"
+import { ACPTurn } from "./turn"
+import { requireReviewKey } from "@harishcode/schema/session-review"
 
 const AuthMethodID = "harishcode-login"
 
@@ -94,11 +95,33 @@ export function make(input: {
     yield* input.sessions.select(attached, change)
   })
 
+  const guarded = Effect.fnUntraced(function* (
+    cwd: string,
+    directories: readonly string[] = [],
+    mcpServers: readonly McpServer[] = [],
+  ) {
+    if ((yield* ACPTurn.PermissionReview) !== "harishcode") return false
+    const workspace = yield* ACPTurn.ReviewWorkspace
+    if (!workspace || FSUtil.resolve(cwd) !== FSUtil.resolve(workspace))
+      return yield* new ACPError.InvalidRequestError({
+        message: "Guarded ACP requires its bound workspace",
+        field: "cwd",
+      })
+    if (directories.length || mcpServers.length)
+      return yield* new ACPError.InvalidRequestError({
+        message: "Guarded ACP does not accept extra directories or MCP servers",
+      })
+    return true
+  })
+
   const getSession = Effect.fnUntraced(function* (sessionId: string, cwd: string) {
+    const review = yield* guarded(cwd)
     const sessionID = yield* ACPClient.decodeSessionID(sessionId)
     const session = yield* input.client.session.get({ sessionID }).pipe(Effect.catch(ACPClient.classify))
     if (FSUtil.resolve(cwd) !== FSUtil.resolve(session.location.directory))
       return yield* new ACPError.SessionDirectoryMismatchError({ sessionId, cwd })
+    if (review && session.metadata?.[requireReviewKey] !== true)
+      return yield* new ACPError.InvalidRequestError({ message: "This session was not created for guarded review" })
     return session
   })
 
@@ -135,17 +158,23 @@ export function make(input: {
       return {}
     }),
     newSession: Effect.fnUntraced(function* (params) {
+      const review = yield* guarded(params.cwd, params.additionalDirectories, params.mcpServers)
       const directories = yield* ACPDirectories.parse(params.cwd, params.additionalDirectories)
       const mcpServers = yield* supportedMcpServers(params.mcpServers)
       // Load first so a catalog failure leaves no session.
       yield* input.catalog.get(params.cwd)
       const created = yield* input.client.session
-        .create({ location: { directory: AbsolutePath.make(params.cwd) }, ...ACPDirectories.grant(directories) })
+        .create({
+          location: { directory: AbsolutePath.make(params.cwd) },
+          ...ACPDirectories.grant(directories),
+          ...(review ? { metadata: { [requireReviewKey]: true } } : {}),
+        })
         .pipe(Effect.catch(ACPClient.classify))
       const attachment = yield* input.sessions.attach(created, params.cwd, mcpServers)
       return { sessionId: attachment.attached.id, configOptions: attachment.configOptions }
     }),
     loadSession: Effect.fnUntraced(function* (params) {
+      yield* guarded(params.cwd, params.additionalDirectories, params.mcpServers)
       const directories = yield* ACPDirectories.parse(params.cwd, params.additionalDirectories)
       const mcpServers = yield* supportedMcpServers(params.mcpServers)
       const session = yield* getSession(params.sessionId, params.cwd)
@@ -201,6 +230,7 @@ export function make(input: {
       return {}
     }),
     resumeSession: Effect.fnUntraced(function* (params) {
+      yield* guarded(params.cwd, params.additionalDirectories, params.mcpServers)
       const directories = yield* ACPDirectories.parse(params.cwd, params.additionalDirectories)
       const mcpServers = yield* supportedMcpServers(params.mcpServers)
       const session = yield* getSession(params.sessionId, params.cwd)
@@ -214,6 +244,7 @@ export function make(input: {
       return {}
     }),
     forkSession: Effect.fnUntraced(function* (params) {
+      yield* guarded(params.cwd, params.additionalDirectories, params.mcpServers)
       const directories = yield* ACPDirectories.parse(params.cwd, params.additionalDirectories)
       const mcpServers = yield* supportedMcpServers(params.mcpServers)
       const session = yield* getSession(params.sessionId, params.cwd)

@@ -6,6 +6,8 @@ import { Effect, Option } from "effect"
 import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/http"
 import { Writable } from "node:stream"
 import { ACP } from "../../acp/agent"
+import { ACPTurn } from "../../acp/turn"
+import { resolveReviewProfile } from "../../acp/guarded"
 import { Commands } from "../commands"
 import { Runtime } from "../../framework/runtime"
 import { Standalone } from "../../services/standalone"
@@ -21,6 +23,17 @@ export default Runtime.handler(
         answer: [],
       })
     }
+    // Owner-controlled guarded review profile (process-launch configuration, never ACP request
+    // metadata). Default stays "client"; guarded mode binds one workspace and never asks the client.
+    const profile = yield* Effect.try({
+      try: () =>
+        resolveReviewProfile({
+          permissionReview: input.permissionReview,
+          reviewWorkspace: Option.getOrUndefined(input.reviewWorkspace),
+          reviewTimeout: Option.getOrUndefined(input.reviewTimeout),
+        }),
+      catch: (error) => (error instanceof Error ? error : new Error(String(error))),
+    })
     process.env.HARISHCODE_CLIENT = "acp"
     const endpoint = yield* Standalone.start()
     const client = yield* HarishCode.make({ baseUrl: endpoint.url }).pipe(
@@ -32,7 +45,17 @@ export default Runtime.handler(
       ),
       Effect.provide(FetchHttpClient.layer),
     )
-    const connection = yield* ACP.connect(client, ndJsonStream(Writable.toWeb(process.stdout), Bun.stdin.stream()))
+    const guardReview = <A, E, R>(effect: Effect.Effect<A, E, R>): Effect.Effect<A, E, R> => {
+      if (profile.mode !== "harishcode") return effect
+      return effect.pipe(
+        Effect.provideService(ACPTurn.PermissionReview, "harishcode"),
+        Effect.provideService(ACPTurn.ReviewWorkspace, profile.workspace),
+        Effect.provideService(ACPTurn.PermissionReviewTimeout, profile.timeout),
+      )
+    }
+    const connection = yield* guardReview(
+      ACP.connect(client, ndJsonStream(Writable.toWeb(process.stdout), Bun.stdin.stream())),
+    )
     const failure = yield* Effect.raceFirst(
       Effect.promise(() => connection.closed).pipe(
         Effect.map(() =>

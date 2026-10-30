@@ -776,7 +776,11 @@ describe("EditTool", () => {
     }),
   )
 
-  it.live("applies the edit when content changes after matching", () =>
+  // Changed-base protection (deliberate semantics change; the previous version of this test,
+  // "applies the edit when content changes after matching", blessed the stale overwrite and
+  // expected "after\n"): an external change between the prepared preview and the post-approval
+  // commit now fails the edit and preserves the newer content.
+  it.live("fails and preserves newer content when the file changes after matching", () =>
     withTempDir((tmp) => {
       const edit = makeEditFixture()
       const target = path.join(tmp.path, "concurrent.txt")
@@ -785,6 +789,81 @@ describe("EditTool", () => {
         Effect.andThen(
           withTool(tmp.path, edit, (registry) =>
             executeTool(registry, call({ path: "concurrent.txt", oldString: "before", newString: "after" })),
+          ),
+        ),
+        Effect.andThen((result) =>
+          Effect.gen(function* () {
+            expect(result.status).toBe("error")
+            expect(result.error?.message).toContain("changed after the edit preview was prepared")
+            expect(yield* Effect.promise(() => fs.readFile(target, "utf8"))).toBe("newer\n")
+            expect(edit.writes).toEqual([])
+          }),
+        ),
+      )
+    }),
+  )
+
+  // Byte-exact base: a change invisible to lossy UTF-8 decoding (0xFF and 0xFE both decode to
+  // U+FFFD) must still fail the commit; the approved base is raw bytes, not decoded text.
+  it.live("fails when only undecodable bytes change after matching", () =>
+    withTempDir((tmp) => {
+      const edit = makeEditFixture()
+      const target = path.join(tmp.path, "bytes.txt")
+      edit.afterRead = () =>
+        edit.reads === 1 ? Effect.promise(() => fs.writeFile(target, Buffer.from([0x61, 0xfe, 0x0a]))) : Effect.void
+      return Effect.promise(() => fs.writeFile(target, Buffer.from([0x61, 0xff, 0x0a]))).pipe(
+        Effect.andThen(
+          withTool(tmp.path, edit, (registry) =>
+            executeTool(registry, call({ path: "bytes.txt", oldString: "a\uFFFD", newString: "b" })),
+          ),
+        ),
+        Effect.andThen((result) =>
+          Effect.gen(function* () {
+            expect(result.status).toBe("error")
+            expect(result.error?.message).toContain("changed after the edit preview was prepared")
+            expect(yield* Effect.promise(() => fs.readFile(target))).toEqual(Buffer.from([0x61, 0xfe, 0x0a]))
+            expect(edit.writes).toEqual([])
+          }),
+        ),
+      )
+    }),
+  )
+
+  // Byte-exact base: a doubled leading BOM decodes to the same text+bom flag as a single BOM;
+  // only a raw-byte base catches it.
+  it.live("fails when the file gains a leading BOM after matching", () =>
+    withTempDir((tmp) => {
+      const edit = makeEditFixture()
+      const target = path.join(tmp.path, "bom.txt")
+      const singleBom = Buffer.from([0xef, 0xbb, 0xbf, 0x6f, 0x6e, 0x65, 0x0a])
+      const doubleBom = Buffer.from([0xef, 0xbb, 0xbf, 0xef, 0xbb, 0xbf, 0x6f, 0x6e, 0x65, 0x0a])
+      edit.afterRead = () => (edit.reads === 1 ? Effect.promise(() => fs.writeFile(target, doubleBom)) : Effect.void)
+      return Effect.promise(() => fs.writeFile(target, singleBom)).pipe(
+        Effect.andThen(
+          withTool(tmp.path, edit, (registry) =>
+            executeTool(registry, call({ path: "bom.txt", oldString: "one", newString: "two" })),
+          ),
+        ),
+        Effect.andThen((result) =>
+          Effect.gen(function* () {
+            expect(result.status).toBe("error")
+            expect(result.error?.message).toContain("changed after the edit preview was prepared")
+            expect(yield* Effect.promise(() => fs.readFile(target))).toEqual(doubleBom)
+            expect(edit.writes).toEqual([])
+          }),
+        ),
+      )
+    }),
+  )
+
+  it.live("applies the edit when the base is unchanged through approval", () =>
+    withTempDir((tmp) => {
+      const edit = makeEditFixture()
+      const target = path.join(tmp.path, "stable.txt")
+      return Effect.promise(() => fs.writeFile(target, "before\n")).pipe(
+        Effect.andThen(
+          withTool(tmp.path, edit, (registry) =>
+            executeTool(registry, call({ path: "stable.txt", oldString: "before", newString: "after" })),
           ),
         ),
         Effect.andThen((result) =>

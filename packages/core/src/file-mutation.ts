@@ -42,6 +42,10 @@ export interface Interface {
 
 export class Service extends Context.Service<Service, Interface>()("@harishcode/FileMutation") {}
 
+/** Raw-byte equality for approved-base preconditions; decoded text comparison is not byte-exact. */
+export const sameBytes = (a: Uint8Array, b: Uint8Array) =>
+  a.length === b.length && a.every((byte, index) => byte === b[index])
+
 export const readText = Effect.fn("FileMutation.readText")(function* (files: Files, target: string) {
   return Bom.decodeBytes((yield* files.read(target)).bytes)
 })

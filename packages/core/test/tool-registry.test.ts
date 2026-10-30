@@ -1,6 +1,6 @@
 import { describe, expect } from "bun:test"
 import { Agent } from "@harishcode/core/agent"
-import type { Permission } from "@harishcode/core/permission"
+import { Permission } from "@harishcode/core/permission"
 import { AppNodeBuilder } from "@harishcode/core/effect/app-node-builder"
 import { Image } from "@harishcode/core/image"
 import { PluginHooks } from "@harishcode/core/plugin/hooks"
@@ -10,6 +10,7 @@ import { State } from "@harishcode/core/state"
 import { Tool } from "@harishcode/core/tool"
 import type { Info } from "@harishcode/schema/tool"
 import { LayerNode } from "@harishcode/util/effect/layer-node"
+import { permissionLayer } from "./lib/permission"
 import { codeModeListings, executeTool, toolDefinitions } from "./lib/tool"
 import { Deferred, Effect, Exit, Fiber, Layer, Logger, Schema, SchemaGetter, SchemaIssue, Scope } from "effect"
 import { z } from "zod"
@@ -39,6 +40,7 @@ const imageStore = Layer.mock(Image.Service, {
 })
 const registryLayer = AppNodeBuilder.build(LayerNode.group([Tool.node, PluginHooks.node]), [
   Image.node.replace(imageStore),
+  Permission.node.replace(permissionLayer()),
 ])
 const it = testEffect(registryLayer)
 const identity = {
@@ -719,10 +721,7 @@ describe("Tool", () => {
       expect(snapshot.codeModeCatalog).toBeUndefined()
       expect((yield* snapshot.execute(call("mcp_lookup"))).output).toEqual({ text: "mcp_lookup" })
 
-      const hidden = yield* service.snapshot([
-        ...denyExecute,
-        { action: "mcp_lookup", resource: "*", effect: "deny" },
-      ])
+      const hidden = yield* service.snapshot([...denyExecute, { action: "mcp_lookup", resource: "*", effect: "deny" }])
       expect(hidden.definitions.map((tool) => tool.name)).toEqual(["bash"])
       expect(yield* hidden.execute(call("mcp_lookup")).pipe(Effect.flip)).toBeInstanceOf(Tool.Error)
     }),

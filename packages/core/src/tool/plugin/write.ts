@@ -14,6 +14,7 @@ import { Environment } from "../../environment/index.js"
 import { FileMutation } from "../../file-mutation.js"
 import { Formatter } from "../../formatter.js"
 import { FileAccess } from "../../file-access.js"
+import { Location } from "../../location.js"
 import { Permission } from "../../permission.js"
 import { fileDiff } from "./file-diff.js"
 
@@ -50,6 +51,7 @@ export const Plugin = {
     const fileMutation = yield* FileMutation.Service
     const environment = yield* Environment.Service
     const formatter = yield* Formatter.Service
+    const location = yield* Location.Service
     const permission = yield* Permission.Service
 
     yield* ctx.tool
@@ -70,9 +72,16 @@ export const Plugin = {
               }
               const target = yield* access.resolve({ path: input.path, kind: "file" })
               yield* access.authorizeExternal([target], context)
-              const current = yield* FileMutation.readText(environment.files, target.absolute).pipe(
-                Effect.catchTag("Environment.NotFound", () => Effect.undefined),
+              // The approved base is the file's raw bytes: decoded text collapses invalid UTF-8
+              // to U+FFFD and repeated BOMs to one flag, so a text comparison is not byte-exact.
+              // A target whose bytes changed fails closed. An unchanged non-UTF-8 target still
+              // commits through the decoded-text view, which re-encodes undecodable bytes as
+              // U+FFFD - pre-existing lossy text-tool behavior this precondition does not change.
+              const currentBytes = yield* environment.files.read(target.absolute).pipe(
+                Effect.map((result) => result.bytes as Uint8Array | undefined),
+                Effect.catchTag("Environment.NotFound", () => Effect.succeed(undefined)),
               )
+              const current = currentBytes ? Bom.decodeBytes(currentBytes) : undefined
               const next = Bom.split(input.content)
               const preview = fileDiff(target.resource, current?.text ?? "", next.text, current ? "modified" : "added")
               yield* permission.assert({
@@ -84,6 +93,31 @@ export const Plugin = {
                 agent: context.agent,
                 source,
               })
+              // Revalidate the base the approval preview was computed from; an external change
+              // between preparation and the post-approval commit fails the write instead of
+              // overwriting newer content. The check and the write still race non-cooperating
+              // external writers - no OS-level compare-and-swap is claimed.
+              const latestBytes = yield* environment.files.read(target.absolute).pipe(
+                Effect.map((result) => result.bytes as Uint8Array | undefined),
+                Effect.catchTags({
+                  "Environment.NotFound": () => Effect.succeed(undefined),
+                  "Environment.WrongKind": () =>
+                    Effect.fail(
+                      new ToolFailure({
+                        message: `${input.path} changed after the write preview was prepared, so the write was not applied. Read the file again and retry.`,
+                      }),
+                    ),
+                }),
+              )
+              const unchanged =
+                latestBytes === undefined
+                  ? currentBytes === undefined
+                  : currentBytes !== undefined && FileMutation.sameBytes(latestBytes, currentBytes)
+              if (!unchanged) {
+                return yield* new ToolFailure({
+                  message: `${input.path} changed after the write preview was prepared, so the write was not applied. Read the file again and retry.`,
+                })
+              }
               const result = yield* fileMutation.writeTextPreservingBom({ target, content: input.content })
               const bom = (yield* FileMutation.readText(environment.files, target.absolute)).bom
               if (yield* formatter.file(target.absolute)) {
@@ -91,6 +125,7 @@ export const Plugin = {
               }
               return result
             }).pipe(
+              fileMutation.withLock([FileAccess.resolvePath(location.directory, input.path)]),
               Effect.map((output) => ({ output, content: toModelContent(output) })),
               Effect.mapError((error) => new ToolFailure({ message: `Unable to write ${input.path}`, error })),
             ),
