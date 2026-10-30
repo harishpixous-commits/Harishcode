@@ -461,7 +461,7 @@ Pairing connects another device to this machine's server from anywhere, and keep
 
 ```ts
 import { Schema } from "effect"
-import { Ipc } from "@opencode/plugin/gui"
+import { Ipc } from "@harishcode/plugin/gui"
 
 /**
  * Turns on remote access and keeps this machine's display awake while another device uses it. The window asks the
@@ -491,7 +491,7 @@ export const Pairing = Ipc.define({
 <!-- source: src/pairing/index.ts -->
 
 ```ts
-import { Plugin } from "@opencode/plugin/gui"
+import { Plugin } from "@harishcode/plugin/gui"
 import en from "./i18n/en"
 
 export default Plugin.define({ i18n: { en } })
@@ -505,14 +505,14 @@ export default Plugin.define({ i18n: { en } })
 import { execFile } from "node:child_process"
 import { powerSaveBlocker } from "electron"
 import { Schema } from "effect"
-import { builtinMainContext } from "@opencode/plugin/gui/builtin"
-import type { Plugin } from "@opencode/plugin/gui/main"
+import { builtinMainContext } from "@harishcode/plugin/gui/builtin"
+import type { Plugin } from "@harishcode/plugin/gui/main"
 import { Pairing } from "./contract"
 
 /** The display sleep blocker this instance holds, if any. */
 type Blocker = { id?: number }
 
-/** The last `opencode service` command; the next one starts after it settles. */
+/** The last `harishcode service` command; the next one starts after it settles. */
 type Queue = { tail: Promise<unknown> }
 
 const setup: Plugin.MainSetup = (ctx) => {
@@ -520,7 +520,7 @@ const setup: Plugin.MainSetup = (ctx) => {
   const stored = builtinMainContext(ctx).storage.store("keepScreenActive", {
     schema: Schema.Boolean,
     initial: false,
-    from: { state: ["opencode.settings", "keepScreenActive"] },
+    from: { state: ["harishcode.settings", "keepScreenActive"] },
   })
 
   const cli = ctx.cli
@@ -542,13 +542,13 @@ const setup: Plugin.MainSetup = (ctx) => {
   }
 
   // Remote access is a setting of the background service, so it changes through the CLI the app runs, as with
-  // `opencode pair --remote`. A change restarts the service, so commands run one at a time.
+  // `harishcode pair --remote`. A change restarts the service, so commands run one at a time.
   const service = (args: readonly string[], signal: AbortSignal) => {
     const run = queue.tail.then(
       () =>
         new Promise<string>((resolve, reject) => {
           execFile(
-            cli.command[0] ?? "opencode",
+            cli.command[0] ?? "harishcode",
             [...cli.command.slice(1), "service", ...args],
             { signal, windowsHide: true },
             (error, stdout, stderr) => {
@@ -590,8 +590,8 @@ export default setup
 
 ```tsx
 import { lazy, onCleanup, Suspense } from "solid-js"
-import { Command, SettingsPage, type Plugin } from "@opencode/plugin/gui"
-import { onIdle } from "@opencode/plugin/gui/builtin"
+import { Command, SettingsPage, type Plugin } from "@harishcode/plugin/gui"
+import { onIdle } from "@harishcode/plugin/gui/builtin"
 import { Pairing } from "./contract"
 import type definition from "./index"
 
