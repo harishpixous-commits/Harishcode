@@ -80,12 +80,7 @@ export function LoadingSplash(props: {
         <div class="relative size-full">
           <div class="absolute inset-x-0 top-[25.375%]">
             <div class="mx-auto w-full max-w-[720px]">
-              <Wordmark
-                outline
-                fade={false}
-                muted={false}
-                class="mx-auto block h-auto w-4/5 text-v2-icon-icon-faint opacity-50"
-              />
+              <Wordmark fade={false} muted={false} class="mx-auto block h-auto w-4/5 text-v2-icon-icon-faint opacity-50" />
             </div>
           </div>
         </div>

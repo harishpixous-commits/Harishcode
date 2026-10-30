@@ -40,22 +40,19 @@ export const Logo = (props: { class?: string }) => {
       classList={{ [props.class ?? ""]: !!props.class }}
     >
       <g>
-        <path d="M18 30H6V18H18V30Z" fill="var(--icon-weak-base)" />
-        <path d="M18 12H6V30H18V12ZM24 36H0V6H24V36Z" fill="var(--icon-base)" />
-        <path d="M48 30H36V18H48V30Z" fill="var(--icon-weak-base)" />
-        <path d="M36 30H48V12H36V30ZM54 36H36V42H30V6H54V36Z" fill="var(--icon-base)" />
-        <path d="M84 24V30H66V24H84Z" fill="var(--icon-weak-base)" />
-        <path d="M84 24H66V30H84V36H60V6H84V24ZM66 18H78V12H66V18Z" fill="var(--icon-base)" />
-        <path d="M108 36H96V18H108V36Z" fill="var(--icon-weak-base)" />
-        <path d="M108 12H96V36H90V6H108V12ZM114 36H108V12H114V36Z" fill="var(--icon-base)" />
-        <path d="M144 30H126V18H144V30Z" fill="var(--icon-weak-base)" />
-        <path d="M144 12H126V30H144V36H120V6H144V12Z" fill="var(--icon-strong-base)" />
-        <path d="M168 30H156V18H168V30Z" fill="var(--icon-weak-base)" />
-        <path d="M168 12H156V30H168V12ZM174 36H150V6H174V36Z" fill="var(--icon-strong-base)" />
-        <path d="M198 30H186V18H198V30Z" fill="var(--icon-weak-base)" />
-        <path d="M198 12H186V30H198V12ZM204 36H180V6H198V0H204V36Z" fill="var(--icon-strong-base)" />
-        <path d="M234 24V30H216V24H234Z" fill="var(--icon-weak-base)" />
-        <path d="M216 12V18H228V12H216ZM234 24H216V30H234V36H210V6H234V24Z" fill="var(--icon-strong-base)" />
+        <path d="M6 9h3v3h-3ZM21 9h3v3h-3ZM6 12h3v3h-3ZM21 12h3v3h-3ZM6 15h3v3h-3ZM21 15h3v3h-3ZM6 18h18v3h-18ZM6 21h3v3h-3ZM21 21h3v3h-3ZM6 24h3v3h-3ZM21 24h3v3h-3ZM6 27h3v3h-3ZM21 27h3v3h-3ZM6 30h3v3h-3ZM21 30h3v3h-3Z" fill="var(--icon-base)" />
+        <path d="M33 15h6v3h-6Z" fill="var(--icon-weak-base)" />
+        <path d="M33 9h6v3h-6ZM30 12h12v3h-12ZM30 15h3v3h-3ZM39 15h3v3h-3ZM27 18h18v3h-18ZM27 21h3v3h-3ZM42 21h3v3h-3ZM27 24h3v3h-3ZM42 24h3v3h-3ZM27 27h3v3h-3ZM42 27h3v3h-3ZM27 30h3v3h-3ZM42 30h3v3h-3Z" fill="var(--icon-base)" />
+        <path d="M51 12h12v3h-12ZM51 15h12v3h-12Z" fill="var(--icon-weak-base)" />
+        <path d="M48 9h15v3h-15ZM48 12h3v3h-3ZM63 12h3v3h-3ZM48 15h3v3h-3ZM63 15h3v3h-3ZM48 18h15v3h-15ZM48 21h3v3h-3ZM57 21h3v3h-3ZM48 24h3v3h-3ZM57 24h3v3h-3ZM48 27h3v3h-3ZM57 27h6v3h-6ZM48 30h3v3h-3ZM60 30h6v3h-6Z" fill="var(--icon-base)" />
+        <path d="M69 9h18v3h-18ZM75 12h6v3h-6ZM75 15h6v3h-6ZM75 18h6v3h-6ZM75 21h6v3h-6ZM75 24h6v3h-6ZM75 27h6v3h-6ZM69 30h18v3h-18Z" fill="var(--icon-base)" />
+        <path d="M93 9h15v3h-15ZM90 12h3v3h-3ZM90 15h3v3h-3ZM93 18h15v3h-15ZM105 21h3v3h-3ZM105 24h3v3h-3ZM105 27h3v3h-3ZM93 30h15v3h-15Z" fill="var(--icon-base)" />
+        <path d="M111 9h3v3h-3ZM126 9h3v3h-3ZM111 12h3v3h-3ZM126 12h3v3h-3ZM111 15h3v3h-3ZM126 15h3v3h-3ZM111 18h18v3h-18ZM111 21h3v3h-3ZM126 21h3v3h-3ZM111 24h3v3h-3ZM126 24h3v3h-3ZM111 27h3v3h-3ZM126 27h3v3h-3ZM111 30h3v3h-3ZM126 30h3v3h-3Z" fill="var(--icon-base)" />
+        <path d="M150 9h9v3h-9ZM147 12h3v3h-3ZM159 12h3v3h-3ZM144 15h3v3h-3ZM144 18h3v3h-3ZM144 21h3v3h-3ZM144 24h3v3h-3ZM147 27h3v3h-3ZM159 27h3v3h-3ZM150 30h9v3h-9Z" fill="var(--icon-strong-base)" />
+        <path d="M171 9h6v3h-6ZM168 12h3v3h-3ZM177 12h3v3h-3ZM165 15h3v3h-3ZM180 15h3v3h-3ZM165 18h3v3h-3ZM180 18h3v3h-3ZM165 21h3v3h-3ZM180 21h3v3h-3ZM165 24h3v3h-3ZM180 24h3v3h-3ZM168 27h3v3h-3ZM177 27h3v3h-3ZM171 30h6v3h-6Z" fill="var(--icon-strong-base)" />
+        <path d="M189 12h12v3h-12ZM189 15h12v3h-12ZM189 18h12v3h-12ZM189 21h12v3h-12ZM189 24h12v3h-12ZM189 27h12v3h-12Z" fill="var(--icon-weak-base)" />
+        <path d="M189 9h12v3h-12ZM186 12h3v3h-3ZM201 12h3v3h-3ZM186 15h3v3h-3ZM201 15h3v3h-3ZM186 18h3v3h-3ZM201 18h3v3h-3ZM186 21h3v3h-3ZM201 21h3v3h-3ZM186 24h3v3h-3ZM201 24h3v3h-3ZM186 27h3v3h-3ZM201 27h3v3h-3ZM189 30h12v3h-12Z" fill="var(--icon-strong-base)" />
+        <path d="M207 9h18v3h-18ZM207 12h3v3h-3ZM207 15h3v3h-3ZM207 18h15v3h-15ZM207 21h3v3h-3ZM207 24h3v3h-3ZM207 27h3v3h-3ZM207 30h18v3h-18Z" fill="var(--icon-strong-base)" />
       </g>
     </svg>
   )

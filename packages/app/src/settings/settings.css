@@ -239,7 +239,7 @@
 }
 
 .settings-about-wordmark {
-  width: 178px;
+  width: 197px;
   height: 32px;
   flex-shrink: 0;
   opacity: 0.2;
@@ -248,7 +248,8 @@
 }
 
 .settings-about-letter-shadow {
-  opacity: 0.3;
+  /* Same counter-shadow strength as the wordmark on the new session screen. */
+  opacity: 0.16;
 }
 
 .settings-about-faint,

@@ -13,9 +13,10 @@ export function createDesktopNotify(api: DesktopNotifyAPI): Platform["notify"] {
 
     if (focused) return
 
+    // No icon: the OS draws the channel's own app icon (the HarishCode mark) from the packaged bundle and
+    // the AppUserModelID, so notifications stay branded and keep working offline.
     const notification = new Notification(title, {
       body: description ?? "",
-      icon: "https://harishcode.ai/favicon-96x96-v3.png",
       silent: true,
     })
 

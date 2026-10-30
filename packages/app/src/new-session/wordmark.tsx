@@ -7,75 +7,78 @@ import "./wordmark.css"
 // Each letter in the 234×42 logo viewBox, with its counter shadow, stem, and bottom-centre pivot.
 const LETTERS = [
   {
-    cx: 8.86,
-    weak: "M4.96 17.1h7.8v7.8h-7.8Z",
+    cx: 15,
+    weak: "",
     fill: "var(--icon-base)",
-    stem: "M0 8.59h3.55v3.55h-3.55ZM14.18 8.59h3.55v3.55h-3.55ZM0 12.14h3.55v3.55h-3.55ZM14.18 12.14h3.55v3.55h-3.55ZM0 15.68h3.55v3.55h-3.55ZM14.18 15.68h3.55v3.55h-3.55ZM0 19.23h17.73v3.55h-17.73ZM0 22.77h3.55v3.55h-3.55ZM14.18 22.77h3.55v3.55h-3.55ZM0 26.32h3.55v3.55h-3.55ZM14.18 26.32h3.55v3.55h-3.55ZM0 29.86h3.55v3.55h-3.55ZM14.18 29.86h3.55v3.55h-3.55Z",
+    stem: "M6 9h3v3h-3ZM21 9h3v3h-3ZM6 12h3v3h-3ZM21 12h3v3h-3ZM6 15h3v3h-3ZM21 15h3v3h-3ZM6 18h18v3h-18ZM6 21h3v3h-3ZM21 21h3v3h-3ZM6 24h3v3h-3ZM21 24h3v3h-3ZM6 27h3v3h-3ZM21 27h3v3h-3ZM6 30h3v3h-3ZM21 30h3v3h-3Z",
   },
   {
-    cx: 30.14,
-    weak: "M26.24 17.1h7.8v7.8h-7.8Z",
+    cx: 36,
+    weak: "M33 15h6v3h-6Z",
     fill: "var(--icon-base)",
-    stem: "M24.82 8.59h10.64v3.55h-10.64ZM21.27 12.14h3.55v3.55h-3.55ZM35.45 12.14h3.55v3.55h-3.55ZM21.27 15.68h3.55v3.55h-3.55ZM35.45 15.68h3.55v3.55h-3.55ZM21.27 19.23h17.73v3.55h-17.73ZM21.27 22.77h3.55v3.55h-3.55ZM35.45 22.77h3.55v3.55h-3.55ZM21.27 26.32h3.55v3.55h-3.55ZM35.45 26.32h3.55v3.55h-3.55ZM21.27 29.86h3.55v3.55h-3.55ZM35.45 29.86h3.55v3.55h-3.55Z",
+    stem: "M33 9h6v3h-6ZM30 12h12v3h-12ZM30 15h3v3h-3ZM39 15h3v3h-3ZM27 18h18v3h-18ZM27 21h3v3h-3ZM42 21h3v3h-3ZM27 24h3v3h-3ZM42 24h3v3h-3ZM27 27h3v3h-3ZM42 27h3v3h-3ZM27 30h3v3h-3ZM42 30h3v3h-3Z",
   },
   {
-    cx: 51.41,
-    weak: "M47.51 17.1h7.8v7.8h-7.8Z",
+    cx: 57,
+    weak: "M51 12h12v3h-12ZM51 15h12v3h-12Z",
     fill: "var(--icon-base)",
-    stem: "M42.55 8.59h14.18v3.55h-14.18ZM42.55 12.14h3.55v3.55h-3.55ZM56.73 12.14h3.55v3.55h-3.55ZM42.55 15.68h3.55v3.55h-3.55ZM56.73 15.68h3.55v3.55h-3.55ZM42.55 19.23h14.18v3.55h-14.18ZM42.55 22.77h3.55v3.55h-3.55ZM49.64 22.77h3.55v3.55h-3.55ZM42.55 26.32h3.55v3.55h-3.55ZM53.18 26.32h3.55v3.55h-3.55ZM42.55 29.86h3.55v3.55h-3.55ZM56.73 29.86h3.55v3.55h-3.55Z",
+    stem: "M48 9h15v3h-15ZM48 12h3v3h-3ZM63 12h3v3h-3ZM48 15h3v3h-3ZM63 15h3v3h-3ZM48 18h15v3h-15ZM48 21h3v3h-3ZM57 21h3v3h-3ZM48 24h3v3h-3ZM57 24h3v3h-3ZM48 27h3v3h-3ZM57 27h6v3h-6ZM48 30h3v3h-3ZM60 30h6v3h-6Z",
   },
   {
-    cx: 72.68,
-    weak: "M68.78 17.1h7.8v7.8h-7.8Z",
+    cx: 78,
+    weak: "",
     fill: "var(--icon-base)",
-    stem: "M63.82 8.59h17.73v3.55h-17.73ZM70.91 12.14h3.55v3.55h-3.55ZM70.91 15.68h3.55v3.55h-3.55ZM70.91 19.23h3.55v3.55h-3.55ZM70.91 22.77h3.55v3.55h-3.55ZM70.91 26.32h3.55v3.55h-3.55ZM63.82 29.86h17.73v3.55h-17.73Z",
+    stem: "M69 9h18v3h-18ZM75 12h6v3h-6ZM75 15h6v3h-6ZM75 18h6v3h-6ZM75 21h6v3h-6ZM75 24h6v3h-6ZM75 27h6v3h-6ZM69 30h18v3h-18Z",
   },
   {
-    cx: 93.95,
-    weak: "M90.05 17.1h7.8v7.8h-7.8Z",
+    cx: 99,
+    weak: "",
     fill: "var(--icon-base)",
-    stem: "M88.64 8.59h14.18v3.55h-14.18ZM85.09 12.14h3.55v3.55h-3.55ZM85.09 15.68h3.55v3.55h-3.55ZM88.64 19.23h10.64v3.55h-10.64ZM99.27 22.77h3.55v3.55h-3.55ZM99.27 26.32h3.55v3.55h-3.55ZM85.09 29.86h14.18v3.55h-14.18Z",
+    stem: "M93 9h15v3h-15ZM90 12h3v3h-3ZM90 15h3v3h-3ZM93 18h15v3h-15ZM105 21h3v3h-3ZM105 24h3v3h-3ZM105 27h3v3h-3ZM93 30h15v3h-15Z",
   },
   {
-    cx: 115.23,
-    weak: "M111.33 17.1h7.8v7.8h-7.8Z",
-    fill: "var(--icon-strong-base)",
-    stem: "M106.36 8.59h3.55v3.55h-3.55ZM120.55 8.59h3.55v3.55h-3.55ZM106.36 12.14h3.55v3.55h-3.55ZM120.55 12.14h3.55v3.55h-3.55ZM106.36 15.68h3.55v3.55h-3.55ZM120.55 15.68h3.55v3.55h-3.55ZM106.36 19.23h17.73v3.55h-17.73ZM106.36 22.77h3.55v3.55h-3.55ZM120.55 22.77h3.55v3.55h-3.55ZM106.36 26.32h3.55v3.55h-3.55ZM120.55 26.32h3.55v3.55h-3.55ZM106.36 29.86h3.55v3.55h-3.55ZM120.55 29.86h3.55v3.55h-3.55Z",
+    cx: 120,
+    weak: "",
+    fill: "var(--icon-base)",
+    stem: "M111 9h3v3h-3ZM126 9h3v3h-3ZM111 12h3v3h-3ZM126 12h3v3h-3ZM111 15h3v3h-3ZM126 15h3v3h-3ZM111 18h18v3h-18ZM111 21h3v3h-3ZM126 21h3v3h-3ZM111 24h3v3h-3ZM126 24h3v3h-3ZM111 27h3v3h-3ZM126 27h3v3h-3ZM111 30h3v3h-3ZM126 30h3v3h-3Z",
   },
   {
-    cx: 147.14,
-    weak: "M143.24 17.1h7.8v7.8h-7.8Z",
+    cx: 153,
+    weak: "",
     fill: "var(--icon-strong-base)",
-    stem: "M141.82 8.59h10.64v3.55h-10.64ZM138.27 12.14h3.55v3.55h-3.55ZM152.45 12.14h3.55v3.55h-3.55ZM138.27 15.68h3.55v3.55h-3.55ZM138.27 19.23h3.55v3.55h-3.55ZM138.27 22.77h3.55v3.55h-3.55ZM138.27 26.32h3.55v3.55h-3.55ZM152.45 26.32h3.55v3.55h-3.55ZM141.82 29.86h10.64v3.55h-10.64Z",
+    stem: "M150 9h9v3h-9ZM147 12h3v3h-3ZM159 12h3v3h-3ZM144 15h3v3h-3ZM144 18h3v3h-3ZM144 21h3v3h-3ZM144 24h3v3h-3ZM147 27h3v3h-3ZM159 27h3v3h-3ZM150 30h9v3h-9Z",
   },
   {
-    cx: 168.41,
-    weak: "M164.51 17.1h7.8v7.8h-7.8Z",
+    cx: 174,
+    weak: "",
     fill: "var(--icon-strong-base)",
-    stem: "M163.09 8.59h10.64v3.55h-10.64ZM159.55 12.14h3.55v3.55h-3.55ZM173.73 12.14h3.55v3.55h-3.55ZM159.55 15.68h3.55v3.55h-3.55ZM173.73 15.68h3.55v3.55h-3.55ZM159.55 19.23h3.55v3.55h-3.55ZM173.73 19.23h3.55v3.55h-3.55ZM159.55 22.77h3.55v3.55h-3.55ZM173.73 22.77h3.55v3.55h-3.55ZM159.55 26.32h3.55v3.55h-3.55ZM173.73 26.32h3.55v3.55h-3.55ZM163.09 29.86h10.64v3.55h-10.64Z",
+    stem: "M171 9h6v3h-6ZM168 12h3v3h-3ZM177 12h3v3h-3ZM165 15h3v3h-3ZM180 15h3v3h-3ZM165 18h3v3h-3ZM180 18h3v3h-3ZM165 21h3v3h-3ZM180 21h3v3h-3ZM165 24h3v3h-3ZM180 24h3v3h-3ZM168 27h3v3h-3ZM177 27h3v3h-3ZM171 30h6v3h-6Z",
   },
   {
-    cx: 189.68,
-    weak: "M185.78 17.1h7.8v7.8h-7.8Z",
+    cx: 195,
+    weak: "M189 12h12v3h-12ZM189 15h12v3h-12ZM189 18h12v3h-12ZM189 21h12v3h-12ZM189 24h12v3h-12ZM189 27h12v3h-12Z",
     fill: "var(--icon-strong-base)",
-    stem: "M180.82 8.59h14.18v3.55h-14.18ZM180.82 12.14h3.55v3.55h-3.55ZM195 12.14h3.55v3.55h-3.55ZM180.82 15.68h3.55v3.55h-3.55ZM195 15.68h3.55v3.55h-3.55ZM180.82 19.23h3.55v3.55h-3.55ZM195 19.23h3.55v3.55h-3.55ZM180.82 22.77h3.55v3.55h-3.55ZM195 22.77h3.55v3.55h-3.55ZM180.82 26.32h3.55v3.55h-3.55ZM195 26.32h3.55v3.55h-3.55ZM180.82 29.86h14.18v3.55h-14.18Z",
+    stem: "M189 9h12v3h-12ZM186 12h3v3h-3ZM201 12h3v3h-3ZM186 15h3v3h-3ZM201 15h3v3h-3ZM186 18h3v3h-3ZM201 18h3v3h-3ZM186 21h3v3h-3ZM201 21h3v3h-3ZM186 24h3v3h-3ZM201 24h3v3h-3ZM186 27h3v3h-3ZM201 27h3v3h-3ZM189 30h12v3h-12Z",
   },
   {
-    cx: 210.95,
-    weak: "M207.05 17.1h7.8v7.8h-7.8Z",
+    cx: 216,
+    weak: "",
     fill: "var(--icon-strong-base)",
-    stem: "M202.09 8.59h17.73v3.55h-17.73ZM202.09 12.14h3.55v3.55h-3.55ZM202.09 15.68h3.55v3.55h-3.55ZM202.09 19.23h14.18v3.55h-14.18ZM202.09 22.77h3.55v3.55h-3.55ZM202.09 26.32h3.55v3.55h-3.55ZM202.09 29.86h17.73v3.55h-17.73Z",
+    stem: "M207 9h18v3h-18ZM207 12h3v3h-3ZM207 15h3v3h-3ZM207 18h15v3h-15ZM207 21h3v3h-3ZM207 24h3v3h-3ZM207 27h3v3h-3ZM207 30h18v3h-18Z",
   },
 ] as const
 
 // Lodger geometry, in the logo's 234×42 viewBox units. The lodger is drawn from its bottom centre.
 const W = 234
 const H = 42
-const HOLE = { x: 222, y: 15 }
-const REST = { x: 222, y: 21 }
-const PIN_SLOT = { x: 226.5, y: 10.5 }
-const GROUND = 36
-const HOME = 246
+// The lodger lives in the open counter of the final "E": the gap under its top arm.
+const HOLE = { x: 216, y: 15.5 }
+const REST = { x: 215.5, y: 20.3 }
+const PIN_SLOT = { x: 221.5, y: 13.5 }
+const GROUND = 33
+const HOME = 240
+// Where the lodger reaches to slot its starter pin back into the "E".
+const SLOT_REACH = { x: 227, y: 19 }
 const POP = 26
 const SLIP = 60
 const HOLE_MAGNET = 24
@@ -109,7 +112,6 @@ type Parts = {
   stage: HTMLDivElement
   svg: SVGSVGElement
   flat: HTMLDivElement
-  notch: SVGRectElement
   letters: SVGGElement[]
   grip: HTMLDivElement
   neck: SVGLineElement
@@ -122,7 +124,7 @@ type Parts = {
 
 /**
  * Reserves the wordmark's space. With `pins`, `NewSessionPinBoard` draws the logo into it. Otherwise it shows
- * the flat logo, and something lives in the top counter of the final "e".
+ * the flat logo, and something lives in the counter of the final "E".
  */
 export function NewSessionWordmark(props: {
   ref: (element: HTMLDivElement) => void
@@ -167,9 +169,9 @@ export function NewSessionWordmark(props: {
 }
 
 /**
- * Eyes peek out of the "e" when the pointer comes near. Dragging them pulls the lodger and a single corner pin
- * out on a stretchy neck; pull far enough and that pin triggers an elastic 3D pull-wave across the wordmark.
- * Dragging the lodger back into the "e" hole reels all the pins back into the flat wordmark.
+ * Eyes peek out of the final "E" when the pointer comes near. Dragging them pulls the lodger and a single corner
+ * pin out on a stretchy neck; pull far enough and that pin triggers an elastic 3D pull-wave across the wordmark.
+ * Dragging the lodger back into the "E" counter reels all the pins back into the flat wordmark.
  */
 function WordmarkLodger(props: {
   box: HTMLDivElement
@@ -182,7 +184,6 @@ function WordmarkLodger(props: {
   let stage!: HTMLDivElement
   let svg!: SVGSVGElement
   let flat!: HTMLDivElement
-  let notch!: SVGRectElement
   let grip!: HTMLDivElement
   let neck!: SVGLineElement
   let pin!: SVGGElement
@@ -195,7 +196,7 @@ function WordmarkLodger(props: {
   onMount(() =>
     onCleanup(
       mountLodger(
-        { box: props.box, stage, svg, flat, notch, letters, grip, neck, pin, critter, body, eyes, blink },
+        { box: props.box, stage, svg, flat, letters, grip, neck, pin, critter, body, eyes, blink },
         props.sound,
         props.onOpen,
         props.onClose,
@@ -212,21 +213,11 @@ function WordmarkLodger(props: {
           <For each={LETTERS}>
             {(item, i) => (
               <g ref={(el) => (letters[i()] = el)}>
-                <g class="opacity-[0.16]">
-                  <path d={item.weak} fill="var(--icon-weak-base)" />
-                  <path d={item.stem} fill={item.fill} />
-                </g>
-                <Show when={i() === 7}>
-                  <rect
-                    ref={notch}
-                    x="224.6"
-                    y="8.6"
-                    width="3.8"
-                    height="3.8"
-                    fill="var(--v2-background-bg-base)"
-                    style={{ opacity: 0 }}
-                  />
+                <Show when={item.weak}>
+                  {/* A shadow inside the counter, so the letter reads as inset. */}
+                  <path class="opacity-[0.16]" d={item.weak} fill="var(--icon-weak-base)" />
                 </Show>
+                <path d={item.stem} fill={item.fill} />
               </g>
             )}
           </For>
@@ -304,7 +295,6 @@ function mountLodger(
     lookY: 0,
     wide: 1,
     squint: 1,
-    notch: 0,
     pinOpacity: 0,
     pinX: PIN_SLOT.x,
     pinY: PIN_SLOT.y,
@@ -363,7 +353,7 @@ function mountLodger(
       return
     }
     parts.grip.style.display = ""
-    const box = where === "hidden" ? { x: 213, y: 8, w: 18, h: 14 } : { x: 234, y: 18, w: 24, h: 24 }
+    const box = where === "hidden" ? { x: 209, y: 10, w: 16, h: 9 } : { x: 228, y: 16, w: 24, h: 24 }
     parts.grip.style.left = `${(box.x / W) * 100}%`
     parts.grip.style.top = `${(box.y / H) * 100}%`
     parts.grip.style.width = `${(box.w / W) * 100}%`
@@ -415,16 +405,15 @@ function mountLodger(
     c.crouch = -clamp01(out / 20) * 0.18
     c.lookX = clamp(dx / 15, 1)
     c.lookY = clamp(dy / 15, 1) * 0.6
-    c.notch = clamp01(out / 3)
-    c.pinOpacity = c.notch
+    c.pinOpacity = clamp01(out / 3)
     c.pinX = lerp(PIN_SLOT.x, c.x - 1.5, clamp01(out / 7))
     c.pinY = lerp(PIN_SLOT.y, c.y - 11, clamp01(out / 7))
     c.pinRot = (c.x - REST.x) * 2.5
     c.pinScale = 1 + stress * 0.35
-    poses[7].x = (c.x - REST.x) * 0.12
-    poses[7].y = (c.y - REST.y) * 0.12
-    poses[7].sx = 1 + stress * 0.05
-    poses[7].sy = 1 + stress * 0.05
+    poses[9].x = (c.x - REST.x) * 0.12
+    poses[9].y = (c.y - REST.y) * 0.12
+    poses[9].sx = 1 + stress * 0.05
+    poses[9].sy = 1 + stress * 0.05
   }
 
   const snapIn = (dt: number) => {
@@ -436,7 +425,6 @@ function mountLodger(
     const fade = Math.exp(-dt * 10)
     c.body = clamp01(out / 4.5)
     c.neck = c.body
-    c.notch *= fade
     c.pinOpacity *= fade
     c.rot *= fade
     c.crouch *= fade
@@ -469,7 +457,6 @@ function mountLodger(
       squint: 1,
       body: 0,
       neck: 0,
-      notch: 0,
       pinOpacity: 0,
       ball: 0,
       stretch: 0,
@@ -506,24 +493,23 @@ function mountLodger(
     {
       at: 1.35,
       run: () => {
-        if (sound()) PinSound.slot(75, 78, PIN_SLOT.x, W)
+        if (sound()) PinSound.slot(74, 78, PIN_SLOT.x, W)
       },
     },
     { at: 1.72, run: () => land(0.32) },
     { at: 1.95, run: () => blinkOnce() },
   ]
 
-  // Pulling one single pin out of the "e" triggers an elastic 3D pull-wave that pops every pin out toward
+  // Pulling one single pin out of the "E" triggers an elastic 3D pull-wave that pops every pin out toward
   // the viewer from right to left, then the lodger hops up to slot its starter pin back in.
   const show = (t: number) => {
     while (c.cue < showCues.length && t >= showCues[c.cue].at) showCues[c.cue++].run()
     if (t >= 2.15) return settleIdle()
     Object.assign(c, { rot: 0, crouch: 0, wide: 1, squint: 1, lookX: -1, lookY: 0, body: 1, eyes: 1 })
-    c.notch = t < 1.35 ? 1 : 0
     c.pinOpacity = t < 1.35 ? 1 : 0
 
     poses.forEach((p, i) => {
-      const start = (7 - i) * 0.08
+      const start = (9 - i) * 0.08
       const u = seg(t, start, start + 0.28)
       p.opacity = 1 - u
       p.x = 0
@@ -554,8 +540,8 @@ function mountLodger(
     }
     if (t < 1.35) {
       const u = seg(t, 1.05, 1.35)
-      c.x = lerp(HOME, 233, easeInOut(u))
-      c.y = lerp(GROUND, 18, easeOut(u)) - Math.sin(Math.PI * u) * 7
+      c.x = lerp(HOME, SLOT_REACH.x, easeInOut(u))
+      c.y = lerp(GROUND, SLOT_REACH.y, easeOut(u)) - Math.sin(Math.PI * u) * 7
       c.pinX = lerp(HOME, PIN_SLOT.x, easeInOut(u))
       c.pinY = lerp(GROUND - 12.5, PIN_SLOT.y, easeInOut(u))
       c.pinRot = 0
@@ -563,8 +549,8 @@ function mountLodger(
       return
     }
     const u = seg(t, 1.35, 1.72)
-    c.x = lerp(233, HOME, easeInOut(u))
-    c.y = lerp(18, GROUND, u) - Math.sin(Math.PI * u) * 10
+    c.x = lerp(SLOT_REACH.x, HOME, easeInOut(u))
+    c.y = lerp(SLOT_REACH.y, GROUND, u) - Math.sin(Math.PI * u) * 10
     c.squint = t > 1.72 ? 0.35 : 1
   }
 
@@ -583,7 +569,6 @@ function mountLodger(
       body: 1,
       eyes: 1,
       neck: 0,
-      notch: 0,
       pinOpacity: 0,
       ball: 0,
       stretch: 0,
@@ -593,7 +578,7 @@ function mountLodger(
     scheduleBlink()
   }
 
-  // Carrying the lodger from HOME: dangles under the pointer and looks toward the "e" hole.
+  // Carrying the lodger from HOME: dangles under the pointer and looks toward the "E" counter.
   const dragCarry = (dt: number) => {
     const dx = pointer.x - pointer.downX
     const dy = pointer.y - pointer.downY
@@ -715,7 +700,7 @@ function mountLodger(
     {
       at: 0.95,
       run: () => {
-        if (sound()) PinSound.slot(75, 78, HOLE.x, W)
+        if (sound()) PinSound.slot(74, 78, HOLE.x, W)
       },
     },
     {
@@ -727,60 +712,58 @@ function mountLodger(
     },
   ]
 
-  // Reverse sequence: the lodger hops into the "e" hole, grabs the corner pin, and reels all 800 pins
-  // from left ("o") back into the "e" before tucking itself back inside.
+  // Reverse sequence: the lodger hops into the "E" counter, grabs the corner pin, and reels the whole
+  // pin wave back in from the left before tucking itself away.
   const pack = (t: number) => {
     while (c.cue < packCues.length && t >= packCues[c.cue].at) packCues[c.cue++].run()
     if (t >= 1.2) return restHidden()
 
     poses.forEach((p, i) => {
-      const start = 0.32 + (i / 7) * 0.48
+      const start = 0.32 + (i / 9) * 0.48
       const u = seg(t, start, start + 0.32)
       p.opacity = u
       p.x = 0
       p.y = 0
     })
 
-    // Hops from the cursor into the "e" counter and grabs the corner starter pin while any loose pins fly home.
+    // Hops from the cursor into the "E" counter and grabs the corner starter pin while any loose pins fly home.
     if (t < 0.3) {
       const u = t / 0.3
       c.x = lerp(c.fromX, REST.x, easeOut(u))
-      c.y = lerp(c.fromY, REST.y - 3, easeOut(u)) - Math.sin(Math.PI * u) * 8
+      c.y = lerp(c.fromY, REST.y, easeOut(u)) - Math.sin(Math.PI * u) * 8
       c.rot = lerp(c.rot, 10, u)
       c.crouch = 0
       c.wide = 1.15
       c.squint = 1
       c.body = 1
       c.eyes = 1
-      c.notch = u
       c.pinOpacity = 1
       c.pinX = lerp(PIN_SLOT.x, REST.x + 3.5, u)
-      c.pinY = lerp(PIN_SLOT.y, REST.y - 10.5, u)
+      c.pinY = lerp(PIN_SLOT.y, REST.y - 6.5, u)
       c.pinRot = u * 18
       c.pinScale = 1.3
       return
     }
-    // Reels the wave in from "o" -> "e" while holding the corner pin.
+    // Reels the wave in while holding the corner pin.
     if (t < 0.9) {
       const u = seg(t, 0.3, 0.9)
       const tug = Math.sin(u * Math.PI * 3)
       c.x = REST.x + tug * 1.2
-      c.y = REST.y - 3 + u * 2
+      c.y = REST.y - 0.4 + u * 0.4
       c.rot = tug * 10
       c.crouch = Math.abs(tug) * 0.14
       c.wide = 1
       c.squint = 0.45
       c.lookX = -1
       c.lookY = 0
-      c.notch = 1
       c.pinOpacity = 1
       c.pinX = lerp(REST.x + 3.5, PIN_SLOT.x, u)
-      c.pinY = lerp(REST.y - 10.5, PIN_SLOT.y, u)
+      c.pinY = lerp(REST.y - 6.5, PIN_SLOT.y, u)
       c.pinRot = (1 - u) * 18
       c.pinScale = lerp(1.3, 1, u)
       return
     }
-    // Slots the corner pin flush and sinks back into the "e" hole.
+    // Slots the corner pin flush and sinks back into the "E" counter.
     const u = seg(t, 0.9, 1.14)
     c.x = REST.x
     c.y = lerp(REST.y - 1, REST.y, easeOut(u))
@@ -791,7 +774,6 @@ function mountLodger(
     c.lookX = 0
     c.lookY = 0
     c.body = 1 - easeInOut(u)
-    c.notch = 1 - u
     c.pinOpacity = 1 - u
   }
 
@@ -913,7 +895,6 @@ function mountLodger(
       put("neck-y2", attr(parts.neck, "y2"), `${c.y - 5}`)
       put("neck-w", attr(parts.neck, "stroke-width"), `${Math.max(2, Math.min(6, 40 / Math.max(1, len)))}`)
     }
-    put("notch", opacity(parts.notch), `${c.notch}`)
     put("pin", opacity(parts.pin), `${c.pinOpacity}`)
     if (c.pinOpacity)
       put(

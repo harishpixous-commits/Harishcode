@@ -11,6 +11,7 @@ import { Menu } from "@harishcode/ui/menu"
 import { InlineInput } from "@harishcode/ui/inline-input"
 import { Keybind } from "@harishcode/ui/keybind"
 import { TextShimmer } from "@harishcode/ui/text-shimmer"
+import { SessionProgressIndicatorV2 } from "@harishcode/session-ui/v2/session-progress-indicator-v2"
 import type { BackgroundTask, MountedSession, SessionScreen } from "@harishcode/plugin/gui"
 import { PluginSlot } from "@/runtime/plugin/render"
 import { useLanguage } from "@/runtime/i18n/language"
@@ -462,7 +463,8 @@ function MessageTimelineView(
     >
       <div class={`flex h-9 items-center gap-2 pt-3 text-[13px] font-[530] leading-text-compact ${turnPadding()}`}>
         <Show when={live() && showWorking()}>
-          <div data-component="session-working" role="status">
+          <div data-component="session-working" role="status" class="flex items-center gap-1.5">
+            <SessionProgressIndicatorV2 width={12} height={12} />
             <TextShimmer text={language.t("session.timeline.working")} active />
           </div>
         </Show>

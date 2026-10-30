@@ -2,9 +2,14 @@ import { createEffect, For, on, onCleanup } from "solid-js"
 import { createStore } from "solid-js/store"
 import { prefersReducedMotion } from "@harishcode/ui/motion"
 
-const target = ["o", "p", "e", "n", "c", "o", "d", "e"] as const
+const target = ["h", "a", "r", "i", "s", "h", "c", "o", "d", "e"] as const
 
-const choices = ["o", "p", "e", "n", "c", "d"] as const
+const choices = ["h", "a", "r", "i", "s", "c", "o", "d", "e"] as const
+
+const letterId = (letter: string) => `settings-about-letter-${letter}`
+
+// 18px glyphs on a 24px pitch, with a wider gap between the two words: "HARISH CODE".
+const slots = [0, 24, 48, 72, 96, 120, 168, 192, 216, 240]
 
 export function AnimatedWordmark(props: { active: boolean }) {
   const [state, setState] = createStore({ letters: [...target] })
@@ -48,36 +53,42 @@ export function AnimatedWordmark(props: { active: boolean }) {
   onCleanup(() => timers.forEach(clearTimeout))
 
   return (
-    <svg class="settings-about-wordmark" viewBox="0 0 234 42" aria-hidden="true">
+    <svg class="settings-about-wordmark" viewBox="0 0 258 42" aria-hidden="true">
       <defs>
-        <symbol id="settings-about-letter-o" viewBox="0 0 24 42">
-          <path class="settings-about-letter-shadow" d="M18 30H6V18H18V30Z" />
-          <path d="M18 12H6V30H18V12ZM24 36H0V6H24V36Z" />
+        <symbol id={letterId("h")} viewBox="0 0 18 24">
+          <path d="M0 0h3v3h-3ZM15 0h3v3h-3ZM0 3h3v3h-3ZM15 3h3v3h-3ZM0 6h3v3h-3ZM15 6h3v3h-3ZM0 9h18v3h-18ZM0 12h3v3h-3ZM15 12h3v3h-3ZM0 15h3v3h-3ZM15 15h3v3h-3ZM0 18h3v3h-3ZM15 18h3v3h-3ZM0 21h3v3h-3ZM15 21h3v3h-3Z" />
         </symbol>
-        <symbol id="settings-about-letter-p" viewBox="0 0 24 42">
-          <path class="settings-about-letter-shadow" d="M18 30H6V18H18V30Z" />
-          <path d="M6 30H18V12H6V30ZM24 36H6V42H0V6H24V36Z" />
+        <symbol id={letterId("a")} viewBox="0 0 18 24">
+          <path class="settings-about-letter-shadow" d="M6 6h6v3h-6Z" />
+          <path d="M6 0h6v3h-6ZM3 3h12v3h-12ZM3 6h3v3h-3ZM12 6h3v3h-3ZM0 9h18v3h-18ZM0 12h3v3h-3ZM15 12h3v3h-3ZM0 15h3v3h-3ZM15 15h3v3h-3ZM0 18h3v3h-3ZM15 18h3v3h-3ZM0 21h3v3h-3ZM15 21h3v3h-3Z" />
         </symbol>
-        <symbol id="settings-about-letter-e" viewBox="0 0 24 42">
-          <path class="settings-about-letter-shadow" d="M24 24V30H6V24H24Z" />
-          <path d="M24 24H6V30H24V36H0V6H24V24ZM6 18H18V12H6V18Z" />
+        <symbol id={letterId("r")} viewBox="0 0 18 24">
+          <path class="settings-about-letter-shadow" d="M3 3h12v3h-12ZM3 6h12v3h-12Z" />
+          <path d="M0 0h15v3h-15ZM0 3h3v3h-3ZM15 3h3v3h-3ZM0 6h3v3h-3ZM15 6h3v3h-3ZM0 9h15v3h-15ZM0 12h3v3h-3ZM9 12h3v3h-3ZM0 15h3v3h-3ZM9 15h3v3h-3ZM0 18h3v3h-3ZM9 18h6v3h-6ZM0 21h3v3h-3ZM12 21h6v3h-6Z" />
         </symbol>
-        <symbol id="settings-about-letter-n" viewBox="0 0 24 42">
-          <path class="settings-about-letter-shadow" d="M18 36H6V18H18V36Z" />
-          <path d="M18 12H6V36H0V6H18V12ZM24 36H18V12H24V36Z" />
+        <symbol id={letterId("i")} viewBox="0 0 18 24">
+          <path d="M0 0h18v3h-18ZM6 3h6v3h-6ZM6 6h6v3h-6ZM6 9h6v3h-6ZM6 12h6v3h-6ZM6 15h6v3h-6ZM6 18h6v3h-6ZM0 21h18v3h-18Z" />
         </symbol>
-        <symbol id="settings-about-letter-c" viewBox="0 0 24 42">
-          <path class="settings-about-letter-shadow" d="M24 30H6V18H24V30Z" />
-          <path d="M24 12H6V30H24V36H0V6H24V12Z" />
+        <symbol id={letterId("s")} viewBox="0 0 18 24">
+          <path d="M3 0h15v3h-15ZM0 3h3v3h-3ZM0 6h3v3h-3ZM3 9h15v3h-15ZM15 12h3v3h-3ZM15 15h3v3h-3ZM15 18h3v3h-3ZM3 21h15v3h-15Z" />
         </symbol>
-        <symbol id="settings-about-letter-d" viewBox="0 0 24 42">
-          <path class="settings-about-letter-shadow" d="M18 30H6V18H18V30Z" />
-          <path d="M18 12H6V30H18V12ZM24 36H0V6H18V0H24V36Z" />
+        <symbol id={letterId("c")} viewBox="0 0 18 24">
+          <path d="M6 0h9v3h-9ZM3 3h3v3h-3ZM15 3h3v3h-3ZM0 6h3v3h-3ZM0 9h3v3h-3ZM0 12h3v3h-3ZM0 15h3v3h-3ZM3 18h3v3h-3ZM15 18h3v3h-3ZM6 21h9v3h-9Z" />
+        </symbol>
+        <symbol id={letterId("o")} viewBox="0 0 18 24">
+          <path d="M6 0h6v3h-6ZM3 3h3v3h-3ZM12 3h3v3h-3ZM0 6h3v3h-3ZM15 6h3v3h-3ZM0 9h3v3h-3ZM15 9h3v3h-3ZM0 12h3v3h-3ZM15 12h3v3h-3ZM0 15h3v3h-3ZM15 15h3v3h-3ZM3 18h3v3h-3ZM12 18h3v3h-3ZM6 21h6v3h-6Z" />
+        </symbol>
+        <symbol id={letterId("d")} viewBox="0 0 18 24">
+          <path class="settings-about-letter-shadow" d="M3 3h12v3h-12ZM3 6h12v3h-12Z" />
+          <path d="M3 0h12v3h-12ZM0 3h3v3h-3ZM15 3h3v3h-3ZM0 6h3v3h-3ZM15 6h3v3h-3ZM0 9h3v3h-3ZM15 9h3v3h-3ZM0 12h3v3h-3ZM15 12h3v3h-3ZM0 15h3v3h-3ZM15 15h3v3h-3ZM0 18h3v3h-3ZM15 18h3v3h-3ZM3 21h12v3h-12Z" />
+        </symbol>
+        <symbol id={letterId("e")} viewBox="0 0 18 24">
+          <path d="M0 0h18v3h-18ZM0 3h3v3h-3ZM0 6h3v3h-3ZM0 9h15v3h-15ZM0 12h3v3h-3ZM0 15h3v3h-3ZM0 18h3v3h-3ZM0 21h18v3h-18Z" />
         </symbol>
       </defs>
       <For each={state.letters}>
         {(letter, index) => (
-          <use href={`#settings-about-letter-${letter}`} x={index() * 30} width="24" height="42" />
+          <use href={`#${letterId(letter)}`} x={slots[index()]} y={9} width="18" height="24" />
         )}
       </For>
     </svg>
