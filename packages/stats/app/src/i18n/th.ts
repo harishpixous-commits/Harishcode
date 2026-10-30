@@ -24,7 +24,7 @@ export const dict = {
   "header.sectionNavLabel": "ส่วนข้อมูล",
   "header.githubAria": "กดดาว Harish Code บน GitHub",
   "header.github": "GitHub",
-  "header.tryHarish Code": "ลองใช้ Harish Code",
+  "header.tryHarishCode": "ลองใช้ Harish Code",
   "header.openNav": "เปิดการนำทาง",
   "header.closeNav": "ปิดการนำทาง",
   "theme.groupLabel": "ธีม",

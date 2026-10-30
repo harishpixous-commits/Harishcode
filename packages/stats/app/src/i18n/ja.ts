@@ -24,7 +24,7 @@ export const dict = {
   "header.sectionNavLabel": "データセクション",
   "header.githubAria": "GitHubでHarish Codeにスターを付ける",
   "header.github": "GitHub",
-  "header.tryHarish Code": "Harish Codeを試す",
+  "header.tryHarishCode": "Harish Codeを試す",
   "header.openNav": "ナビゲーションを開く",
   "header.closeNav": "ナビゲーションを閉じる",
   "theme.groupLabel": "テーマ",

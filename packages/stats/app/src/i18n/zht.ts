@@ -24,7 +24,7 @@ export const dict = {
   "header.sectionNavLabel": "數據分區",
   "header.githubAria": "在 GitHub 上為 Harish Code 加星",
   "header.github": "GitHub",
-  "header.tryHarish Code": "試用 Harish Code",
+  "header.tryHarishCode": "試用 Harish Code",
   "header.openNav": "開啟導覽",
   "header.closeNav": "關閉導覽",
   "theme.groupLabel": "主題",

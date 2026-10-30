@@ -22,7 +22,7 @@ export const dict = {
   "header.sectionNavLabel": "Datenbereiche",
   "header.githubAria": "Harish Code auf GitHub mit Stern markieren",
   "header.github": "GitHub",
-  "header.tryHarish Code": "Harish Code ausprobieren",
+  "header.tryHarishCode": "Harish Code ausprobieren",
   "header.openNav": "Navigation öffnen",
   "header.closeNav": "Navigation schließen",
   "theme.groupLabel": "Design",

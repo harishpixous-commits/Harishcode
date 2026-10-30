@@ -8,7 +8,7 @@ import { collectFiles } from "./files"
 export async function buildAppArchive(channel: string, options?: { skipBuild?: boolean }) {
   if (options?.skipBuild) return AppArchive.encode([])
   const root = path.resolve(import.meta.dirname, "../../app")
-  await $`bun run build`
+  await $`bunx --bun vite build`
     .cwd(root)
     .env({ ...process.env, HARISHCODE_CHANNEL: channel, VITE_HARISHCODE_SERVER_MODE: "origin" })
   return AppArchive.encode(
