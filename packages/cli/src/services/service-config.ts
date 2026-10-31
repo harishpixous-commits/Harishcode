@@ -54,7 +54,9 @@ export function defaultPort(channel = HARISHCODE_CHANNEL, platform = process.pla
 }
 
 function channelPort(channel: string) {
-  if (channel === "latest" || channel === "dev" || channel === "beta" || channel === "next") return 0xc0de
+  // HarishCode runs beside other clients that keep the shared 0xC0DE service port, so it takes its own base:
+  // a service that cannot bind never registers, and the desktop then waits for one that never appears.
+  if (channel === "latest" || channel === "dev" || channel === "beta" || channel === "next") return 0xa1c0
   if (channel === "local") return 0xc0df
   return 10_000 + (Number.parseInt(Hash.fast(channel).slice(0, 8), 16) % 50_000)
 }
