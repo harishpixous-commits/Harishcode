@@ -359,6 +359,16 @@
       border: 1px solid var(--color-border-weak);
     }
 
+    /* The preview PNGs are transparent, so pin each variant to the swatch it was drawn for.
+       Without this the light-theme artwork vanishes on the dark page and vice versa. */
+    [data-component="brand-grid"] img[data-variant="light"] {
+      background: #f2f1ef;
+    }
+
+    [data-component="brand-grid"] img[data-variant="dark"] {
+      background: #211e1e;
+    }
+
     [data-component="brand-grid"] > div {
       position: relative;
     }

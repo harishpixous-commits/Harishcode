@@ -91,7 +91,7 @@ export default function Brand() {
 
             <div data-component="brand-grid">
               <div>
-                <img src={previewLogoLight} alt={alt} />
+                <img src={previewLogoLight} alt={alt} data-variant="light" />
                 <div data-component="actions">
                   <button onClick={() => downloadFile(logoLightPng, "harishcode-logo-light.png")}>
                     PNG
@@ -118,7 +118,7 @@ export default function Brand() {
                 </div>
               </div>
               <div>
-                <img src={previewLogoDark} alt={alt} />
+                <img src={previewLogoDark} alt={alt} data-variant="dark" />
                 <div data-component="actions">
                   <button onClick={() => downloadFile(logoDarkPng, "harishcode-logo-dark.png")}>
                     PNG
@@ -145,7 +145,7 @@ export default function Brand() {
                 </div>
               </div>
               <div>
-                <img src={previewLogoLightSquare} alt={alt} />
+                <img src={previewLogoLightSquare} alt={alt} data-variant="light" />
                 <div data-component="actions">
                   <button onClick={() => downloadFile(logoLightSquarePng, "harishcode-logo-light-square.png")}>
                     PNG
@@ -172,7 +172,7 @@ export default function Brand() {
                 </div>
               </div>
               <div>
-                <img src={previewLogoDarkSquare} alt={alt} />
+                <img src={previewLogoDarkSquare} alt={alt} data-variant="dark" />
                 <div data-component="actions">
                   <button onClick={() => downloadFile(logoDarkSquarePng, "harishcode-logo-dark-square.png")}>
                     PNG
@@ -199,7 +199,7 @@ export default function Brand() {
                 </div>
               </div>
               <div>
-                <img src={previewWordmarkLight} alt={alt} />
+                <img src={previewWordmarkLight} alt={alt} data-variant="light" />
                 <div data-component="actions">
                   <button onClick={() => downloadFile(wordmarkLightPng, "harishcode-wordmark-light.png")}>
                     PNG
@@ -226,7 +226,7 @@ export default function Brand() {
                 </div>
               </div>
               <div>
-                <img src={previewWordmarkDark} alt={alt} />
+                <img src={previewWordmarkDark} alt={alt} data-variant="dark" />
                 <div data-component="actions">
                   <button onClick={() => downloadFile(wordmarkDarkPng, "harishcode-wordmark-dark.png")}>
                     PNG
@@ -253,7 +253,7 @@ export default function Brand() {
                 </div>
               </div>
               <div>
-                <img src={previewWordmarkSimpleLight} alt={alt} />
+                <img src={previewWordmarkSimpleLight} alt={alt} data-variant="light" />
                 <div data-component="actions">
                   <button onClick={() => downloadFile(wordmarkSimpleLightPng, "harishcode-wordmark-simple-light.png")}>
                     PNG
@@ -280,7 +280,7 @@ export default function Brand() {
                 </div>
               </div>
               <div>
-                <img src={previewWordmarkSimpleDark} alt={alt} />
+                <img src={previewWordmarkSimpleDark} alt={alt} data-variant="dark" />
                 <div data-component="actions">
                   <button onClick={() => downloadFile(wordmarkSimpleDarkPng, "harishcode-wordmark-simple-dark.png")}>
                     PNG
