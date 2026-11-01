@@ -7,6 +7,12 @@ This branch carries 14 work commits + this document. Nothing here is merged to `
 
 - The codemode tool progress failure in `packages/core/test/tool-registry.test.ts` ("executes and reports progress for codemode tools advertised in a model request") was NOT pre-existing. Bisected to `3965829`: its parent `a3a3dd6` passes 42/0, `3965829` fails. Root cause: the anomalyco/opencode#60120 port applied the `tool.ts` throttle and the `tool-execute.test.ts` changes but missed upstream's 1-line `tool-registry.test.ts` contract change. The throttle intentionally drops the trailing progress event on success because the execute result metadata carries the final rows; the test still demanded it as a progress event. Fixed by applying the missed upstream line: final rows are now asserted on `execution.metadata.toolCalls`. Verified after fix: tool-registry 42/0, tool-execute 18/0, codemode 2/0.
 - The other four failures listed below were re-run at base `2c94981` on 2026-11-01 and DO fail identically there: database-migration 20 pass/1 fail, preload 1 pass/1 fail, session-runner-recorded 5s recorded-transport timeout, provider-gitlab-oauth 8 pass/11 fail. Their "pre-existing" labels are confirmed, not assumed.
+### Environment notes added 2026-11-01 (continuation branch)
+
+- `packages/app` tests MUST be run with the project invocation `bun run test:unit` (--conditions=solid --preload ../ui/test/solid-jsx.ts --preload ./happydom.ts). Plain `bun test` produces ~38 false `jsxDEV` load failures because solid-js 1.9.17 maps jsx-dev-runtime to the production dist. With the correct invocation: 924 pass / 0 fail.
+- `packages/desktop` script/picker.test.ts "serves browser-loadable picker scripts" (both bundled-dev variants) fails identically at `2c94981`, `21d5fcd8` and current tip in this Linux sandbox: the esbuild/vite service is killed under sandbox resource limits (binary itself verified working). Environment-bound here; needs a real desktop environment to verify.
+- `packages/cli` test/service.test.ts "concurrent service processes elect one server" times out identically at `21d5fcd8` and tip: environment-bound process-election behavior in this sandbox.
+- Fixed on the continuation branch: WinGet install detection regex (pre-rebrand package family), ghostty-web pin test drift, service-port tests for the deliberate 0xa1c0 base, HarishCode project-avatar ID set (was upstream hashes), session-title fuzzy-match case broken by the rebrand, and both missed anomalyco/opencode#60120 test changes.
 
 ## What is on this branch (newest first)
 
