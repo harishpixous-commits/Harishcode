@@ -684,6 +684,18 @@ function footerComposerFrame(root: BoxRenderable | RootRenderable) {
   return boxPath(root, "TextareaRenderable")!.at(-5)!
 }
 
+// Panel-ghost guard shared by the transition test and its negative control: returns a
+// description of the first stale panel artifact found, or null when the frame is clean.
+// The composer's intentional left rail renders "┃" only at column 0
+// (src/mini/footer.prompt.tsx border=["left"]), so a vertical bar anywhere else is a ghost.
+function panelGhost(frame: string): string | null {
+  if (frame.includes("Commands")) return "panel title"
+  if (frame.includes("┌")) return "panel corner"
+  if (frame.includes("█")) return "block char"
+  if (frame.split("\n").some((line) => line.slice(1).includes("┃"))) return "stray vertical bar"
+  return null
+}
+
 function footerStatusline(root: BoxRenderable | RootRenderable) {
   return root.findDescendantById("mini-statusline") as BoxRenderable
 }
@@ -1599,22 +1611,34 @@ test("direct footer recreates the frame across command panel transitions", async
       expect(app.captureCharFrame()).toContain("Commands")
       app.mockInput.pressKey("c", { ctrl: true })
       await app.renderOnce()
-      expect(app.captureCharFrame()).not.toContain("Commands")
-      expect(app.captureCharFrame()).not.toContain("┌")
-      expect(app.captureCharFrame()).not.toContain("█")
-      // The composer rail renders "┃" at column 0 by design (footer.prompt.tsx); a
-      // panel ghost would leave a vertical bar anywhere else.
-      expect(
-        app
-          .captureCharFrame()
-          .split("\n")
-          .every((line) => !line.slice(1).includes("┃")),
-      ).toBe(true)
+      expect(panelGhost(app.captureCharFrame())).toBe(null)
       // The composer textarea unmounts while the command panel is open (the panel's
       // InputRenderable is the only text input in the tree then), so the frame
       // identity check runs after the panel closes and the composer remounts.
       expect(footerComposerFrame(app.renderer.root)).not.toBe(composerFrame)
     }
+  } finally {
+    app.cleanup()
+  }
+})
+
+test("panel ghost guard trips on stale panel artifacts and accepts the composer rail", async () => {
+  // Injected frames: the guard must catch each artifact class it exists for.
+  expect(panelGhost("Commands\nSearch")).toBe("panel title")
+  expect(panelGhost("┌──\npanel")).toBe("panel corner")
+  expect(panelGhost("progress ██")).toBe("block char")
+  expect(panelGhost("┃ prompt   ┃ stale")).toBe("stray vertical bar")
+  // The intended rail alone (vertical bar only at column 0) must pass.
+  expect(panelGhost("┃ prompt\nBuild · gpt-5")).toBe(null)
+
+  // Live control: with the command panel actually open, the guard must trip.
+  const app = await renderFooter()
+  try {
+    await app.renderOnce()
+    app.mockInput.pressKey("p", { ctrl: true })
+    await app.renderOnce()
+    expect(app.captureCharFrame()).toContain("Commands")
+    expect(panelGhost(app.captureCharFrame())).not.toBe(null)
   } finally {
     app.cleanup()
   }
