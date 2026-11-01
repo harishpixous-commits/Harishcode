@@ -578,3 +578,22 @@ it.effect("execute sends at most one progress update per 100 ms with the latest 
     expect(result.metadata).toEqual({ toolCalls: [...steps, row("wait", "completed"), row("step", "completed")] })
   }),
 )
+it.effect("interrupted execute sends its latest progress rows before it settles", () =>
+  Effect.gen(function* () {
+    const started = yield* Deferred.make<void>()
+    const progress: Array<Tool.Metadata> = []
+    const fiber = yield* progressCodeMode(started, Effect.never)
+      .execute(
+        { code: "await tools.step({}); await tools.step({}); return await tools.wait({})" },
+        { ...context, progress: (update) => Effect.sync(() => progress.push(update)) },
+      )
+      .pipe(Effect.forkChild({ startImmediately: true }))
+    yield* Deferred.await(started)
+    yield* Fiber.interrupt(fiber)
+    yield* TestClock.adjust("1 second")
+    expect(progress).toEqual([
+      { toolCalls: [row("step", "running")] },
+      { toolCalls: [row("step", "completed"), row("step", "completed"), row("wait", "error")] },
+    ])
+  }),
+)
