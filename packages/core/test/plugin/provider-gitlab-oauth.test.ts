@@ -1,5 +1,6 @@
-import { describe, expect } from "bun:test"
+import { describe, expect, mock } from "bun:test"
 import { Clock, Effect, Schedule } from "effect"
+import * as realHttp from "node:http"
 import { HttpClient, HttpClientRequest, HttpClientResponse } from "effect/http"
 import { Credential } from "@harishcode/core/credential"
 import { Integration } from "@harishcode/core/integration"
@@ -10,6 +11,32 @@ import { ProviderPlugins } from "@harishcode/core/plugin/provider"
 import { withEnv } from "../fixture/env"
 import { testEffect } from "../lib/effect"
 import { PluginTestLayer } from "./fixture"
+
+// Test-only isolated network harness: the production registered redirect URI is pinned
+// to 127.0.0.1:8080 (GitLab matches redirect_uri exactly), and that port can be occupied
+// in sandboxed or shared environments. Relocate only the listener created in tests to an
+// alternate port; production code, the redirect URI and the error text are unchanged.
+const TEST_CALLBACK_PORT = 18080
+const realCreateServer = realHttp.createServer
+function wrappedCreateServer(...args: Parameters<typeof realHttp.createServer>) {
+  const server = realCreateServer(...args)
+  const listen = server.listen.bind(server)
+  server.listen = ((port: number, ...rest: unknown[]) =>
+    listen(port === 8080 ? TEST_CALLBACK_PORT : port, ...(rest as []))) as typeof server.listen
+  return server
+}
+mock.module("node:http", () => ({
+  ...realHttp,
+  default: { ...realHttp, createServer: wrappedCreateServer },
+  createServer: wrappedCreateServer,
+}))
+// The URL the user-agent flow advertises keeps the registered port; fetches in tests
+// target the relocated listener instead.
+const fetchCallback = (url: URL) => {
+  const actual = new URL(url)
+  actual.port = String(TEST_CALLBACK_PORT)
+  return fetch(actual, { headers: { Connection: "close" } })
+}
 
 const it = testEffect(PluginTestLayer)
 const integrationID = Integration.ID.make("gitlab")
@@ -143,7 +170,7 @@ describe("GitLabPlugin OAuth", () => {
         test.replies.push(
           Response.json({ access_token: "access-token", refresh_token: "refresh-token", expires_in: 7200 }),
         )
-        const page = yield* Effect.promise(() => fetch(login.callback, { headers: { Connection: "close" } }))
+        const page = yield* Effect.promise(() => fetchCallback(login.callback))
         expect(page.status).toBe(200)
         expect(yield* Effect.promise(() => page.text())).toContain("Authorization successful")
         expect((yield* test.status(login.attempt.attemptID)).status).toBe("complete")
@@ -194,7 +221,7 @@ describe("GitLabPlugin OAuth", () => {
         test.replies.push(
           Response.json({ access_token: "access-token", refresh_token: "refresh-token", expires_in: 3600 }),
         )
-        yield* Effect.promise(() => fetch(callback, { headers: { Connection: "close" } }))
+        yield* Effect.promise(() => fetchCallback(callback))
         expect((yield* test.status(attempt.attemptID)).status).toBe("complete")
         expect(test.requests[0]?.url).toBe("https://example.com/gitlab/oauth/token")
         const saved = (yield* test.credentials.list(integrationID))[0]
@@ -346,7 +373,7 @@ describe("GitLabPlugin OAuth", () => {
         const test = yield* fixture()
         const login = yield* test.connect
         Object.entries(invalid.params).forEach(([key, value]) => login.callback.searchParams.set(key, value))
-        const response = yield* Effect.promise(() => fetch(login.callback, { headers: { Connection: "close" } }))
+        const response = yield* Effect.promise(() => fetchCallback(login.callback))
         expect(response.status).toBe(400)
         expect(yield* Effect.promise(() => response.text())).toContain("Authorization failed")
         expect(yield* test.status(login.attempt.attemptID)).toMatchObject({
@@ -380,7 +407,7 @@ describe("GitLabPlugin OAuth", () => {
         const saved = yield* test.credentials.list(integrationID)
         const login = yield* test.connect
         test.replies.push(new Response(response.body, { status: response.status }))
-        const page = yield* Effect.promise(() => fetch(login.callback, { headers: { Connection: "close" } }))
+        const page = yield* Effect.promise(() => fetchCallback(login.callback))
         expect(page.status).toBe(400)
         const text = yield* Effect.promise(() => page.text())
         expect(text).toContain(response.contains)
@@ -411,7 +438,7 @@ describe("GitLabPlugin OAuth", () => {
         const login = yield* test.connect
         expect(login.url.searchParams.get("client_id")).toBe("custom-client-id")
         test.replies.push(Response.json({ access_token: "a", refresh_token: "r", expires_in: 3600 }))
-        yield* Effect.promise(() => fetch(login.callback, { headers: { Connection: "close" } }))
+        yield* Effect.promise(() => fetchCallback(login.callback))
         expect((yield* test.status(login.attempt.attemptID)).status).toBe("complete")
         const form = new URLSearchParams(yield* Effect.promise(() => test.requests[0]?.text() ?? Promise.resolve("")))
         expect(form.get("client_id")).toBe("custom-client-id")
