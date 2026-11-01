@@ -2,7 +2,7 @@ import { expect, test } from "bun:test"
 import { matchesSessionTitle } from "./session-match"
 
 test.each([
-  { title: "HARISHCODE CONSOLE", query: "open con", matches: true },
+  { title: "HARISHCODE CONSOLE", query: "harish con", matches: true },
   { title: "HARISHCODE CONSOLE", query: "HARISHCODE CONSOLE", matches: true },
   { title: "HARISHCODE CONSOLE", query: "console", matches: true },
   { title: "HARISHCODE CONSOLE", query: "HARISHCODE CONSOLE ", matches: false },
