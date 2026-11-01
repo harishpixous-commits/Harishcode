@@ -53,8 +53,8 @@ async function generate() {
 
     await fs.mkdir(full)
     await drizzle(temporary, full, "schema")
-    await Bun.write(schema, await formatTypescript(renderSchema(await generatedSql(full))))
-    await Bun.write(registry, await formatTypescript(renderRegistry(await typescriptMigrations())))
+    await writeGenerated(schema, await formatTypescript(renderSchema(await generatedSql(full))))
+    await writeGenerated(registry, await formatTypescript(renderRegistry(await typescriptMigrations())))
   } finally {
     await fs.rm(temporary, { recursive: true, force: true })
   }
@@ -77,12 +77,12 @@ async function check() {
 
     await fs.mkdir(full)
     await drizzle(temporary, full, "schema")
-    if ((await Bun.file(schema).text()) !== (await formatTypescript(renderSchema(await generatedSql(full))))) {
+    if ((await normalizedText(schema)) !== (await formatTypescript(renderSchema(await generatedSql(full))))) {
       throw new Error("Current database schema is stale. Run `bun script/migration.ts` from packages/core.")
     }
 
     const migrations = await typescriptMigrations()
-    if ((await Bun.file(registry).text()) !== (await formatTypescript(renderRegistry(migrations)))) {
+    if ((await normalizedText(registry)) !== (await formatTypescript(renderRegistry(migrations)))) {
       throw new Error("Database migration registry is stale. Run `bun script/migration.ts` from packages/core.")
     }
   } finally {
@@ -178,6 +178,19 @@ function renderRun(statement: string) {
 
 function escapeTemplate(line: string) {
   return line.replaceAll("\\", "\\\\").replaceAll("`", "\\`").replaceAll("${", "\\${")
+}
+
+// The repository was committed with CRLF line endings while prettier emits LF. Compare
+// generated content EOL-insensitively and keep an existing file's line endings on rewrite,
+// otherwise every check reports stale schema and every generation rewrites the whole file.
+async function normalizedText(file: string) {
+  return (await Bun.file(file).text()).replaceAll("\r\n", "\n")
+}
+
+async function writeGenerated(file: string, content: string) {
+  const existing = await Bun.file(file)
+  const crlf = (await existing.exists()) && (await existing.text()).includes("\r\n")
+  await Bun.write(file, crlf ? content.replaceAll("\n", "\r\n") : content)
 }
 
 async function formatTypescript(input: string) {
