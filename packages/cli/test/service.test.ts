@@ -392,7 +392,7 @@ test("clean managed service shutdown removes its registration", async () => {
   }
 }, 30_000)
 
-test("concurrent service processes elect one server", async () => {
+const runServiceElection = async (contenders: number) => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "harishcode-service-election-"))
   const env = serviceEnv(root)
   const command = [process.execPath, path.join(import.meta.dir, "../src/index.ts"), "serve", "--service"]
@@ -401,11 +401,7 @@ test("concurrent service processes elect one server", async () => {
   const config = path.join(root, "config", "harishcode", "service-local.json")
   await fs.mkdir(path.join(root, "config", "harishcode"), { recursive: true })
   await fs.writeFile(config, JSON.stringify({ port }))
-  // Keep the contender count within what a 2GB sandbox can hold: each bun serve child
-  // takes ~200MB, so 10 concurrent children trigger the OOM killer (SIGKILL, exitCode
-  // null) and the failure masquerades as an election defect. Five children still race
-  // through the same real registration/election path.
-  const processes = Array.from({ length: 5 }, () => Bun.spawn(command, { env, stderr: "pipe", stdout: "pipe" }))
+  const processes = Array.from({ length: contenders }, () => Bun.spawn(command, { env, stderr: "pipe", stdout: "pipe" }))
 
   try {
     const info = await waitForInfo(registration)
@@ -463,7 +459,15 @@ test("concurrent service processes elect one server", async () => {
     await Promise.all(processes.map((process) => process.exited))
     await fs.rm(root, { recursive: true, force: true })
   }
-}, 120_000)
+}
+
+test("concurrent service processes elect one server", () => runServiceElection(10), 120_000)
+
+// Resource-bounded diagnostic only: exercises the same real spawn/registration/election
+// path with fewer children so it fits a 2GB host. Each bun serve child takes ~200MB RSS,
+// so 10 concurrent children get OOM-killed there (kernel SIGKILL, exitCode null). This
+// diagnostic does not replace the 10-contender acceptance gate above.
+test("concurrent service processes elect one server (resource-bounded diagnostic)", () => runServiceElection(5), 120_000)
 
 test("configured managed service port overrides the channel default", async () => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "harishcode-service-port-"))
