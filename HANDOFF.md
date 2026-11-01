@@ -3,6 +3,11 @@
 Latest verified state of Harish Code for continued development. Base: remote tip `2c94981`.
 This branch carries 14 work commits + this document. Nothing here is merged to `main`.
 
+## Correction — 2026-11-01 (regression record)
+
+- The codemode tool progress failure in `packages/core/test/tool-registry.test.ts` ("executes and reports progress for codemode tools advertised in a model request") was NOT pre-existing. Bisected to `3965829`: its parent `a3a3dd6` passes 42/0, `3965829` fails. Root cause: the anomalyco/opencode#60120 port applied the `tool.ts` throttle and the `tool-execute.test.ts` changes but missed upstream's 1-line `tool-registry.test.ts` contract change. The throttle intentionally drops the trailing progress event on success because the execute result metadata carries the final rows; the test still demanded it as a progress event. Fixed by applying the missed upstream line: final rows are now asserted on `execution.metadata.toolCalls`. Verified after fix: tool-registry 42/0, tool-execute 18/0, codemode 2/0.
+- The other four failures listed below were re-run at base `2c94981` on 2026-11-01 and DO fail identically there: database-migration 20 pass/1 fail, preload 1 pass/1 fail, session-runner-recorded 5s recorded-transport timeout, provider-gitlab-oauth 8 pass/11 fail. Their "pre-existing" labels are confirmed, not assumed.
+
 ## What is on this branch (newest first)
 
 - `5af7f8e` test(core): use real WASM legacy scanner in gap characterization modes
@@ -29,7 +34,7 @@ This branch carries 14 work commits + this document. Nothing here is merged to `
 ## Known issues (pre-existing, not caused by these commits)
 
 - `bun run lint`: `oxlint` aborts (SIGABRT, oxc allocator) in this sandbox; `script/sdk-docs.ts` reports 4 README code-block drifts in `packages/gui-plugins/` that already exist at remote tip `2c94981`.
-- `packages/core` environment-bound test failures (fail identically without these commits): database-migration stale schema snapshot, GitLab OAuth (network/port), preload HOME-isolation assertion, session-runner recorded transport, codemode tool progress (5s timeout in this environment).
+- `packages/core` environment-bound test failures (fail identically without these commits): database-migration stale schema snapshot, GitLab OAuth (network/port), preload HOME-isolation assertion, session-runner recorded transport. (The codemode tool progress entry previously here was wrong — see the 2026-11-01 correction above.)
 
 ## Explicitly NOT adopted (isolated experiment, do not merge from here)
 
