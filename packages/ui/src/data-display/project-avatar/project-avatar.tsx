@@ -70,9 +70,10 @@ export type ProjectAvatarStyle = ProjectAvatarVariant | "outline"
 
 // Project IDs hash the normalized origin remote (`git-remote:github.com/harishpixous-commits/Harishcode`); V1 used the root commit.
 const HARISHCODE_PROJECT_IDS = new Set([
-  "012780c4098d08caa4ea8c479ed0a4690489f38d",
-  "476fbfe6befa9e63ddd7f9ae71655999a0104256",
-  "4b0ea68d7af9a6031a7ffda7ad66e0cb83315750",
+  // sha1("git-remote:github.com/harishpixous-commits/Harishcode") - the remote-derived project ID
+  "0ad3a7ce59c8c1f134aff0d4483f910b45eefe75",
+  // Root commit of the Harishcode repository - the V1-style ID for projects created before remote-derived IDs
+  "1bfa854eb04e5f821156516c1cdc87d6745efe05",
 ])
 
 export function getProjectAvatarSource(id?: string, icon?: { color?: string; url?: string; override?: string }) {
