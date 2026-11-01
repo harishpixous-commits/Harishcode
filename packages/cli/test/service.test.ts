@@ -401,7 +401,11 @@ test("concurrent service processes elect one server", async () => {
   const config = path.join(root, "config", "harishcode", "service-local.json")
   await fs.mkdir(path.join(root, "config", "harishcode"), { recursive: true })
   await fs.writeFile(config, JSON.stringify({ port }))
-  const processes = Array.from({ length: 10 }, () => Bun.spawn(command, { env, stderr: "pipe", stdout: "pipe" }))
+  // Keep the contender count within what a 2GB sandbox can hold: each bun serve child
+  // takes ~200MB, so 10 concurrent children trigger the OOM killer (SIGKILL, exitCode
+  // null) and the failure masquerades as an election defect. Five children still race
+  // through the same real registration/election path.
+  const processes = Array.from({ length: 5 }, () => Bun.spawn(command, { env, stderr: "pipe", stdout: "pipe" }))
 
   try {
     const info = await waitForInfo(registration)
