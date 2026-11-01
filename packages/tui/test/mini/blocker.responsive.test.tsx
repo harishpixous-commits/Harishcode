@@ -651,7 +651,9 @@ test("external form exposes its complete URL and state-specific actions", async 
     expect(app.captureCharFrame()).not.toContain("choose")
     for (let index = 0; index < 10; index++) app.mockInput.pressKey("\x1b[6~")
     await settle(app)
-    expect(app.captureCharFrame()).toContain("URL_SENTINEL")
+    // The narrow form wraps the URL mid-token; compare with row whitespace stripped
+    // (same normalization as the wrapped-permission test below).
+    expect(app.captureCharFrame().replace(/\s+/g, "")).toContain("URL_SENTINEL")
     app.mockInput.pressEnter()
     await settle(app)
     expect(opened).toEqual([url])

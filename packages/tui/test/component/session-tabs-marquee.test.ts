@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, jest, test } from "bun:test"
 import { createRoot } from "solid-js"
 import { createMarquee, createTabMarquee } from "../../src/component/session-tabs"
+import { marqueeCycleWidth } from "../../src/util/marquee"
 
 afterEach(() => jest.useRealTimers())
 
@@ -28,7 +29,8 @@ describe("session tab marquee", () => {
     const scope = createRoot((dispose) => ({ marquee: createMarquee(() => false), dispose }))
 
     scope.marquee.enter("first", "harishcode", 6)
-    jest.advanceTimersByTime(1_400)
+    // One full scroll cycle: MARQUEE_DELAY (600ms) plus cycleWidth MARQUEE_INTERVAL (80ms) ticks.
+    jest.advanceTimersByTime(600 + 80 * marqueeCycleWidth("harishcode"))
 
     expect(scope.marquee.active()).toBe("first")
     expect(scope.marquee.offset()).toBe(0)
