@@ -159,7 +159,7 @@ const make = Effect.gen(function* () {
     executable.includes(`${path.sep}Cellar${path.sep}${name}${path.sep}`),
   )
   // WinGet extracts portable packages into a directory named after the package identifier.
-  const installedWinget = /[\\/]winget[\\/]packages[\\/]anomaly\.harishcode_/i.test(executable)
+  const installedWinget = /[\\/]winget[\\/]packages[\\/]harish\.harishcode_/i.test(executable)
 
   const readPolicy = Effect.fnUntraced(function* () {
     const values = yield* Effect.forEach(["config.json", "harishcode.json", "harishcode.jsonc"], (name) =>
