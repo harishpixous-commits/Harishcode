@@ -93,7 +93,7 @@ test("external development and terminal sources keep their pinned upstream ident
   for (const name of ["app", "gui-plugins"]) {
     const pkg = JSON.parse(await readFile(new URL(`../../${name}/package.json`, import.meta.url), "utf8"))
     expect(pkg.dependencies["ghostty-web"] ?? pkg.devDependencies?.["ghostty-web"]).toBe(
-      "github:anomalyco/ghostty-web#e91e38a9ceb13c566ddfa15185a9393849f712a9",
+      "github:coder/ghostty-web#e91e38a9ceb13c566ddfa15185a9393849f712a9",
     )
   }
   const lock = await readFile(new URL("../../../bun.lock", import.meta.url), "utf8")
