@@ -1583,9 +1583,9 @@ test("direct footer rejects local commands submitted with the queue shortcut", a
   }
 })
 
-// OpenTUI currently crashes Bun in the full `test/cli/run` directory run here.
-// Re-enable after the upstream OpenTUI fix lands in this repo.
-test.skip("direct footer recreates the frame across command panel transitions", async () => {
+
+
+test("direct footer recreates the frame across command panel transitions", async () => {
   const app = await renderFooter()
 
   try {
@@ -1597,19 +1597,30 @@ test.skip("direct footer recreates the frame across command panel transitions", 
       await app.renderOnce()
 
       expect(app.captureCharFrame()).toContain("Commands")
-      expect(footerComposerFrame(app.renderer.root)).not.toBe(composerFrame)
       app.mockInput.pressKey("c", { ctrl: true })
       await app.renderOnce()
       expect(app.captureCharFrame()).not.toContain("Commands")
-      expect(app.captureCharFrame()).not.toContain("┃")
+      expect(app.captureCharFrame()).not.toContain("┌")
       expect(app.captureCharFrame()).not.toContain("█")
+      // The composer rail renders "┃" at column 0 by design (footer.prompt.tsx); a
+      // panel ghost would leave a vertical bar anywhere else.
+      expect(
+        app
+          .captureCharFrame()
+          .split("\n")
+          .every((line) => !line.slice(1).includes("┃")),
+      ).toBe(true)
+      // The composer textarea unmounts while the command panel is open (the panel's
+      // InputRenderable is the only text input in the tree then), so the frame
+      // identity check runs after the panel closes and the composer remounts.
+      expect(footerComposerFrame(app.renderer.root)).not.toBe(composerFrame)
     }
   } finally {
     app.cleanup()
   }
 })
 
-test.skip("direct footer dispatches leader variant binding only when leader is registered", async () => {
+test("direct footer dispatches leader variant binding only when leader is registered", async () => {
   const calls: string[] = []
   const app = await renderFooter({
     tuiConfig: createTuiResolvedConfig({ keybinds: { leader: "ctrl+x", "variant.cycle": "<leader>t" } }),
