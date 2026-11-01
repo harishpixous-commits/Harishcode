@@ -9,6 +9,17 @@ const attribute = "data-harishcode-picker-source"
 export function pickerPlugin() {
   const plugin = picker()
   const client = "/__vite_harishcode_picker_client.js"
+  // The published @brendonovich/vite-plugin-opencode package keeps its opencode-named virtual
+  // module, client global and data attributes. Bridge them to the Harish Code names: resolve
+  // through the package's real virtual id and rebrand the served client source, so the client
+  // queries the same data-harishcode-picker-* attributes the transform below injects.
+  const packageClient = "virtual:vite-opencode-picker/client"
+  const rebrand = (source: string | null) =>
+    source
+      ?.replaceAll("opencodePickerUi", "harishcodePickerUi")
+      .replaceAll("data-opencode-picker-source", attribute)
+      .replaceAll("data-opencode-picker-description", "data-harishcode-picker-description")
+      .replaceAll("data-opencode-picker-ui", "data-harishcode-picker-ui") ?? ""
   let workspaceRoot = ""
 
   return {
@@ -18,12 +29,21 @@ export function pickerPlugin() {
       workspaceRoot = gitRoot(config.root)
     },
     resolveId(id: string) {
-      return plugin.resolveId(id === client ? "virtual:vite-harishcode-picker/client" : id)
+      return plugin.resolveId(id === client ? packageClient : id)
+    },
+    // Bundled dev imports the client through the plugin's own hooks, so rebrand here too -
+    // the dev-server middleware alone only covers the directly served URL.
+    load(id: string) {
+      const source = plugin.load(id)
+      if (source instanceof Promise) {
+        return source.then((value) => (typeof value === "string" ? rebrand(value) : value))
+      }
+      return typeof source === "string" ? rebrand(source) : source
     },
     configureServer(server: Parameters<typeof plugin.configureServer>[0]) {
       server.middlewares.use(client, (_request, response) => {
         response.setHeader("content-type", "text/javascript")
-        response.end(plugin.load(plugin.resolveId("virtual:vite-harishcode-picker/client")!))
+        response.end(rebrand(plugin.load(plugin.resolveId(packageClient)!)))
       })
       plugin.configureServer(server)
     },
