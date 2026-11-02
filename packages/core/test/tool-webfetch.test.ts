@@ -720,3 +720,96 @@ describe("WebFetchTool registration", () => {
     }),
   )
 })
+describe("WebFetchTool requested-URL permission matching", () => {
+  // Same as the shared stubs, but assert also enforces the denied set like the real service does for deny rules.
+  const enforcing = permissionLayer({
+    assert: (input) =>
+      Effect.sync(() => assertions.push(input)).pipe(
+        Effect.andThen(
+          input.resources.some((resource) => denied.has(resource))
+            ? Effect.fail(
+                new Permission.BlockedError({ rules: [], permission: input.action, resources: input.resources }),
+              )
+            : Effect.void,
+        ),
+      ),
+    assertNotDenied: (input) =>
+      Effect.sync(() => checks.push(input)).pipe(
+        Effect.andThen(
+          input.resources.some((resource) => denied.has(resource))
+            ? Effect.fail(
+                new Permission.BlockedError({ rules: [], permission: input.action, resources: input.resources }),
+              )
+            : Effect.void,
+        ),
+      ),
+  })
+  const itDeny = testEffect(
+    toolLayer([LayerNodePlatform.httpClient.replace(http), Permission.node.replace(enforcing)]),
+  )
+
+  it.effect("matches the entry rule against the normalized URL and fetches that same target", () =>
+    Effect.gen(function* () {
+      reset()
+      const registry = yield* Tool.Service
+      expect(yield* executeTool(registry, call({ url: "HTTP://Example.COM:80/a/./b", format: "text" }))).toMatchObject(
+        { status: "completed", content: [{ type: "text", text: "hello" }] },
+      )
+      const canonical = "http://example.com/a/b"
+      expect(assertions.map((input) => input.resources)).toEqual([[canonical]])
+      expect(requests.map((request) => request.url)).toEqual([canonical])
+    }),
+  )
+
+  itDeny.effect("denies a non-canonical URL whose canonical form is denied, with zero egress", () =>
+    Effect.gen(function* () {
+      reset()
+      const registry = yield* Tool.Service
+      denied.add("http://example.com/secret")
+      const result = yield* executeTool(registry, call({ url: "HTTP://EXAMPLE.COM:80/x/../secret", format: "text" }))
+      expect(result.status).toBe("error")
+      expect(assertions.map((input) => input.resources)).toEqual([["http://example.com/secret"]])
+      expect(requests).toEqual([])
+    }),
+  )
+
+  itDeny.effect("still denies the exact canonical denied URL (control)", () =>
+    Effect.gen(function* () {
+      reset()
+      const registry = yield* Tool.Service
+      denied.add("http://example.com/secret")
+      const result = yield* executeTool(registry, call({ url: "http://example.com/secret", format: "text" }))
+      expect(result.status).toBe("error")
+      expect(requests).toEqual([])
+    }),
+  )
+
+  it.effect("allows an ordinary canonical URL (control)", () =>
+    Effect.gen(function* () {
+      reset()
+      const registry = yield* Tool.Service
+      const url = "http://example.com/ok"
+      expect(yield* executeTool(registry, call({ url, format: "text" }))).toMatchObject({ status: "completed" })
+      expect(assertions.map((input) => input.resources)).toEqual([[url]])
+      expect(requests.map((request) => request.url)).toEqual([url])
+    }),
+  )
+
+  it.effect("keeps credentials and percent-encoding in the matched resource (documented caveats)", () =>
+    Effect.gen(function* () {
+      reset()
+      const registry = yield* Tool.Service
+      const withCredentials = "http://user:pass@example.com/ok"
+      expect(yield* executeTool(registry, call({ url: withCredentials, format: "text" }))).toMatchObject({
+        status: "completed",
+      })
+      // URL keeps credentials in href: a rule must include them to match, same as upstream after #60505.
+      const encoded = "http://example.com/s%65cret"
+      expect(yield* executeTool(registry, call({ url: encoded, format: "text" }))).toMatchObject({
+        status: "completed",
+      })
+      // URL does not decode %65: percent-encoding variants stay distinct resources, same as upstream.
+      expect(assertions.map((input) => input.resources)).toEqual([[withCredentials], [encoded]])
+    }),
+  )
+})

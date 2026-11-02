@@ -138,14 +138,20 @@ export const Plugin = {
           output: Output,
           execute: (input, context) =>
             Effect.gen(function* () {
-              yield* Effect.try({
-                try: () => assertHttpUrl(new URL(input.url)),
+              // Rules are matched against the URL that is requested, so `HTTPS://EVIL.COM` meets a rule for
+              // `https://evil.com/*`. (ports the webfetch half of anomalyco/opencode#60505)
+              const url = yield* Effect.try({
+                try: () => {
+                  const parsed = new URL(input.url)
+                  assertHttpUrl(parsed)
+                  return parsed.href
+                },
                 catch: (error) => error,
               })
 
               yield* permission.assert({
                 action: name,
-                resources: [input.url],
+                resources: [url],
                 save: ["*"],
                 metadata: input,
                 sessionID: context.sessionID,
@@ -163,10 +169,8 @@ export const Plugin = {
                     agent: context.agent,
                     source: { type: "tool", messageID: context.messageID, id: context.id },
                   })
-                const response = yield* execute(http, check, input.url, input.format).pipe(
-                  Effect.catchIf(isCloudflareChallenge, () =>
-                    execute(http, check, input.url, input.format, "harishcode"),
-                  ),
+                const response = yield* execute(http, check, url, input.format).pipe(
+                  Effect.catchIf(isCloudflareChallenge, () => execute(http, check, url, input.format, "harishcode")),
                 )
                 const contentType = response.headers["content-type"] || ""
                 const mime = mimeFrom(contentType)
