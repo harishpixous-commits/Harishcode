@@ -30,7 +30,12 @@ const FALLBACK_REASONS = new Set([
 ])
 
 /** Whether a failed route should hand over to the next one. A malformed request or a policy refusal would fail everywhere. */
-export const shouldFallBack = (error: AIError) => FALLBACK_REASONS.has(error.reason._tag)
+// A free model that was retired or is out of capacity answers as an invalid request ("Model is unavailable");
+// that is a route problem, not a problem with the user's request, so the next route gets a turn.
+const ROUTE_UNAVAILABLE = /unavailable|not found|no longer|deprecated|retired|not supported|overloaded|capacity|usage limit/i
+export const shouldFallBack = (error: AIError) =>
+  FALLBACK_REASONS.has(error.reason._tag) ||
+  (error.reason._tag === "InvalidRequest" && ROUTE_UNAVAILABLE.test(String((error.reason as any).message ?? error.message ?? "")))
 
 const outputStarted = (event: LLMEvent) =>
   /delta$/.test(event.type) || event.type === "tool-call" || event.type === "media" || event.type === "tool-input-start"
