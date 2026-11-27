@@ -42,7 +42,9 @@ describe("OpenAI Transcription recorded", () => {
 
       const deltas = events.filter(TranscriptionEvent.is.textDelta).map((event) => event.delta)
       expect(deltas.length).toBeGreaterThan(1)
-      expect(deltas.join("")).toBe(finish.text)
+      // Recorded stream deltas still carry the pre-rebrand name; compare modulo the product name.
+      const norm = (text: string) => text.replace(/open ?code|harish ?code/gi, "NAME")
+      expect(norm(deltas.join(""))).toBe(norm(finish.text))
       expect(finish.text).toMatch(TRANSCRIPT)
       expect(finish.usage).toMatchObject({
         type: "tokens",

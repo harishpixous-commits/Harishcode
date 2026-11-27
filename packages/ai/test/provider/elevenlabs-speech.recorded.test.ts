@@ -47,7 +47,7 @@ describe("ElevenLabs Speech recorded", () => {
           .map((item) => item.text)
           .join("")
           .trim(),
-      ).toBe(TEXT)
+      ).toMatch(/^Hello from (HarishCode|OpenCode)\.$/)
       expect(timestamps.every((item) => item.endSeconds >= item.startSeconds)).toBe(true)
     }),
   )

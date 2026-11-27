@@ -14,7 +14,7 @@ export const audio = fixture("hello.mp3")
 export const dialog = fixture("dialog.mp3")
 
 /** Providers disagree on "HarishCode" versus "Open Code" and on the final punctuation. */
-export const TRANSCRIPT = /^hello,? from open ?code[.!]?$/i
+export const TRANSCRIPT = /^hello,? from (harish ?code|open ?code)[.!]?$/i
 
 /**
  * Request bodies are snapshotted as text, so the audio would be stored as mangled UTF-8. Replace it with a marker and
