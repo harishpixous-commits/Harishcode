@@ -95,7 +95,7 @@ describe("toSessionError", () => {
       type: "error",
       error: { type: "FreeUsageLimitError", message: "Rate limit exceeded. Please try again later." },
     }
-    const free = fail("https://harishcode.ai/inference/openai/v1/chat/completions", freeBody, { "retry-after": "3600" })
+    const free = fail("https://opencode.ai/inference/openai/v1/chat/completions", freeBody, { "retry-after": "3600" })
     expect(SessionRunnerRetry.isRetryable(free)).toBe(false)
     expect(toSessionError(free)).toEqual({
       type: "provider.free-limit",
@@ -106,7 +106,7 @@ describe("toSessionError", () => {
     })
 
     const paid = fail(
-      "https://harishcode.ai/inference/openai/v1/chat/completions",
+      "https://opencode.ai/inference/openai/v1/chat/completions",
       { error: { type: "server_error", message: "Upstream request failed: Rate limit exceeded." } },
       { "retry-after": "45" },
     )
@@ -114,7 +114,7 @@ describe("toSessionError", () => {
     expect(toSessionError(paid)).toMatchObject({ type: "provider.rate-limit", retryAfterMs: 45_000 })
 
     const go = fail(
-      "https://harishcode.ai/inference/go/openai/v1/chat/completions",
+      "https://opencode.ai/inference/go/openai/v1/chat/completions",
       { type: "error", error: { type: "GoUsageLimitError", message: "Subscription quota exceeded." } },
       { "retry-after": "120" },
     )
@@ -134,7 +134,7 @@ describe("toSessionError", () => {
     const refuse = (body: unknown) =>
       RequestExecutor.httpFailure({
         message: "A budget policy for this model has been reached.",
-        url: "https://harishcode.ai/inference/openai/v1/chat/completions",
+        url: "https://opencode.ai/inference/openai/v1/chat/completions",
         status: 429,
         responseBody: JSON.stringify(body),
       })

@@ -4,7 +4,7 @@ import { HARISHCODE_VERSION } from "../src/version"
 import type { FormFields } from "@harishcode/client"
 
 const consoleForm = [
-  { type: "string", key: "server", hidden: true, format: "uri", default: "https://harishcode.ai/console" },
+  { type: "string", key: "server", hidden: true, format: "uri", default: "https://opencode.ai/console" },
 ] satisfies FormFields
 
 describe("auth command", () => {
@@ -148,7 +148,7 @@ describe("auth command", () => {
       method: "device",
       form: consoleForm,
       args: [],
-      answer: { server: "https://harishcode.ai/console" },
+      answer: { server: "https://opencode.ai/console" },
     },
     {
       id: "harishcode",

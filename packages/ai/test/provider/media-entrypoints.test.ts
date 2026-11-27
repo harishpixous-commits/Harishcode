@@ -225,9 +225,9 @@ const decisions: ReadonlyArray<Case<DecisionModel>> = [
     name: "harishcode",
     load: async () => {
       const { model } = await import("@harishcode/ai/providers/harishcode/decisions")
-      return model("jev", { ...shared, apiKey: "zen-key", baseURL: "https://harishcode.ai/inference/systemone/v1" })
+      return model("jev", { ...shared, apiKey: "zen-key", baseURL: "https://opencode.ai/inference/systemone/v1" })
     },
-    url: "https://harishcode.ai/inference/systemone/v1/systemone",
+    url: "https://opencode.ai/inference/systemone/v1/systemone",
     auth: ["authorization", "Bearer zen-key"],
     headers: { "typesafe-danger-zone-images": "true" },
     provider: "harishcode",

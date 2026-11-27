@@ -3,6 +3,7 @@ export * as SessionStep from "./step.js"
 import {
   AIError,
   InvalidProviderOutputError,
+  FreeFallback,
   LLMClient,
   LLMEvent,
   isContextOverflowFailure,
@@ -104,7 +105,13 @@ export const make = Effect.gen(function* () {
     // A local execution starts only after its Tool.Called publication completes.
     let overflowFailure: ProviderErrorEvent | undefined
     // Read to the end, not just the finish event, so the next request can reuse this response.
-    const providerStream = llm.stream(input.prepared.request, input.prepared.options).pipe(
+    // The built-in free tier is shared and limited. When it fails before any output, move to the free routes the user
+    // configured in the environment (Gemini, NVIDIA), one attempt each, never swapping keys. Not used with a paid key.
+    const freeFallbacks =
+      input.model.model.provider === "harishcode" && !process.env.HARISHCODE_API_KEY
+        ? FreeFallback.modelsFromEnv(process.env)
+        : []
+    const providerStream = FreeFallback.stream(llm, input.prepared.request, freeFallbacks, input.prepared.options).pipe(
       Stream.runForEach((event) =>
         Effect.gen(function* () {
           if (overflowFailure || publisher.hasProviderError()) return

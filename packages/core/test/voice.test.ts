@@ -169,8 +169,8 @@ it.effect(
           req.headers["x-harishcode-org-id"],
         ]),
       ).toEqual([
-        ["https://harishcode.ai/inference/openai/v1/live/sessions", "Bearer console-access", "wrk_console"],
-        ["https://harishcode.ai/inference/openai/v1/live/sessions", "Bearer harishcode-env-key", undefined],
+        ["https://opencode.ai/inference/openai/v1/live/sessions", "Bearer console-access", "wrk_console"],
+        ["https://opencode.ai/inference/openai/v1/live/sessions", "Bearer harishcode-env-key", undefined],
         ["https://api.openai.com/v1/live/sessions", "Bearer sk-active", undefined],
       ])
 

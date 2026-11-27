@@ -134,7 +134,7 @@ export const node = makeLocationNode({
 })
 
 /** HarishCode hosts GPT-Live on its OpenAI account, billed to the workspace whose credential starts a session. */
-const harishCodeLive = { provider: "harishcode", baseURL: "https://harishcode.ai/inference/openai/v1" } as const
+const harishCodeLive = { provider: "harishcode", baseURL: "https://opencode.ai/inference/openai/v1" } as const
 
 /**
  * What a credential starts a session with: a provider's API key on its own API, or an HarishCode Console API key or

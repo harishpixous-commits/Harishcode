@@ -156,7 +156,7 @@ describe("HarishcodePlugin", () => {
           type: "oauth",
           label: "HarishCode Console account",
           form: [
-            { key: "server", type: "string", format: "uri", hidden: true, default: "https://harishcode.ai/console" },
+            { key: "server", type: "string", format: "uri", hidden: true, default: "https://opencode.ai/console" },
           ],
         },
         { type: "key", label: "API key (service account)" },
@@ -1059,7 +1059,7 @@ describe("HarishcodePlugin", () => {
       yield* addPlugin().pipe(Effect.provideService(HttpClient.HttpClient, http))
       yield* drain
 
-      expect(requests).toEqual(["https://harishcode.ai/console/api/v2/config"])
+      expect(requests).toEqual(["https://opencode.ai/console/api/v2/config"])
     }),
   )
 
@@ -1363,8 +1363,8 @@ describe("HarishcodePlugin", () => {
             new WebSearch.Response({ providerID: WebSearch.ID.make("harishcode"), results: [] }),
           )
           expect(requests).toEqual([
-            "https://harishcode.ai/console/api/v2/config",
-            "https://harishcode.ai/console/api/websearch",
+            "https://opencode.ai/console/api/v2/config",
+            "https://opencode.ai/console/api/websearch",
           ])
         }),
       (server) => Effect.promise(() => server.stop(true)),

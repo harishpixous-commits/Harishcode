@@ -4,7 +4,7 @@ import { AuthOptions, type ProviderAuthOption } from "../route/auth-options.js"
 import { SystemOne } from "../protocols/system-one.js"
 
 export const id = ProviderID.make("harishcode")
-const baseURL = "https://harishcode.ai/inference/systemone/v1"
+const baseURL = "https://opencode.ai/inference/systemone/v1"
 
 export type Config = ProviderAuthOption<"optional"> & {
   readonly baseURL?: string
